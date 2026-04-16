@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>피트스탑 AX — Live 응원메세지</title>
+
+  <!-- Firebase SDK (Firestore) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <!-- QR Code generator -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --red: #FF3A2F; }
+    body { font-family: -apple-system, 'Apple SD Gothic Neo', 'Pretendard', sans-serif; background: white; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes pulse   { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+    #display { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 28px; border-bottom: 1.5px solid #f4f4f4; flex-shrink: 0;
+    }
+    .header-left  { display: flex; align-items: center; gap: 14px; }
+    .accent-bar   { width: 5px; height: 44px; background: var(--red); border-radius: 3px; }
+    .event-title  { font-size: 24px; font-weight: 900; color: #111; letter-spacing: -0.8px; }
+    .event-sub    { font-size: 12px; color: #bbb; margin-top: 1px; }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    #msg-count    { font-size: 12px; color: #ccc; font-weight: 500; }
+    .live-badge   { display: flex; align-items: center; gap: 5px; }
+    .live-dot     { width: 7px; height: 7px; background: #22c55e; border-radius: 50%; animation: pulse 1.8s infinite; }
+    .live-text    { font-size: 10px; font-weight: 900; color: #22c55e; letter-spacing: 1.2px; }
+    .reset-btn    { font-size: 10px; color: #ddd; background: none; border: none; cursor: pointer; padding: 4px 10px; border-radius: 6px; }
+    .reset-btn:hover { color: #999; }
+
+    .main-area { flex: 1; display: flex; overflow: hidden; }
+
+    #feed {
+      flex: 1; overflow-y: auto; padding: 16px 22px;
+      display: flex; flex-direction: column; gap: 9px;
+    }
+    .empty-state {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; color: #ddd; font-size: 14px;
+      text-align: center; gap: 10px; padding: 4rem 0; line-height: 1.8;
+    }
+    .empty-emoji { font-size: 40px; }
+
+    .msg-card {
+      display: flex; gap: 13px; padding: 13px 16px;
+      background: white; border: 1px solid #f0f0f0; border-radius: 14px; flex-shrink: 0;
+    }
+    .msg-card.animate { animation: slideIn 0.38s ease forwards; }
+
+    .avatar {
+      width: 42px; height: 42px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 13px; font-weight: 700;
+    }
+    .msg-name { font-size: 12px; font-weight: 700; color: #111; margin-bottom: 3px; }
+    .msg-text { font-size: 15px; color: #333; line-height: 1.55; word-break: break-word; }
+
+    .qr-sidebar {
+      width: 192px; border-left: 1.5px solid #f4f4f4;
+      padding: 22px 16px; display: flex; flex-direction: column;
+      align-items: center; gap: 14px; flex-shrink: 0;
+    }
+    #qrcode     { width: 152px; height: 152px; border-radius: 10px; overflow: hidden; }
+    .qr-title   { font-size: 14px; font-weight: 900; color: var(--red); margin-bottom: 5px; }
+    .qr-sub     { font-size: 11px; color: #bbb; line-height: 1.7; }
+    #resp-count { font-size: 11px; color: #ddd; }
+
+    #submit-view {
+      min-height: 100vh; display: flex; align-items: center;
+      justify-content: center; padding: 1.5rem; background: #f7f7f7;
+    }
+    .submit-card   { width: 100%; max-width: 360px; }
+    .submit-header { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
+    .submit-accent { width: 4px; height: 38px; background: var(--red); border-radius: 3px; }
+    .submit-title  { font-size: 19px; font-weight: 900; color: #111; letter-spacing: -0.3px; }
+    .submit-sub    { font-size: 11px; color: #bbb; margin-top: 1px; }
+
+    .form-box { background: white; border-radius: 18px; padding: 22px; border: 1px solid #eaeaea; }
+    .form-field { margin-bottom: 18px; }
+    .field-label { font-size: 10px; font-weight: 700; color: #aaa; letter-spacing: 1.2px; margin-bottom: 8px; }
+
+    .field-input {
+      width: 100%; padding: 11px 14px; border: 1.5px solid #eee; border-radius: 10px;
+      font-size: 15px; outline: none; font-family: inherit; color: #111; background: white;
+      transition: border-color 0.18s;
+    }
+    .field-input:focus { border-color: var(--red); }
+    textarea.field-input { resize: none; height: 88px; line-height: 1.55; }
+    #char-count { text-align: right; font-size: 10px; color: #ddd; margin-top: 3px; }
+
+    .send-btn {
+      width: 100%; margin-top: 4px; padding: 13px;
+      background: var(--red); color: white; border: none; border-radius: 10px;
+      font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
+      transition: opacity 0.15s;
+    }
+    .send-btn:hover    { opacity: 0.88; }
+    .send-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    #success-msg {
+      display: none; margin-top: 12px; text-align: center;
+      padding: 13px 16px; background: white; border-radius: 12px;
+      border: 1px solid #ffe0de; color: var(--red); font-weight: 600; font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ============================================================
+     🔧 FIREBASE CONFIG
+     Firebase Console → 프로젝트 설정 → 내 앱 → SDK 설정 및 구성
+     아래 YOUR_* 값을 실제 값으로 교체하세요 (databaseURL 불필요)
+     ============================================================ -->
+<script>
+  const firebaseConfig = {
+    apiKey:            "AIzaSyB5VpEbNq3rnkPX8ccvBpAZ6gwew9rraOw",
+    authDomain:        "wad-sso-project.firebaseapp.com",
+    projectId:         "wad-sso-project",
+    storageBucket:     "wad-sso-project.firebasestorage.app",
+    messagingSenderId: "452975502054",
+    appId:             "1:452975502054:web:1ddfe8ece45d19708b9127"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db      = firebase.firestore();
+  const msgsRef = db.collection('ax-pitstop-messages');
+</script>
+
+<script>
+  const PALETTE = [
+    '#FF3A2F','#E91E63','#9C27B0','#3F51B5',
+    '#2196F3','#009688','#FF6B35','#00ACC1','#F44336'
+  ];
+  function colorFor(s) {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    return PALETTE[Math.abs(h) % PALETTE.length];
+  }
+  function esc(t) {
+    return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  const isSubmit = location.hash === '#submit';
+  document.addEventListener('DOMContentLoaded', () => {
+    isSubmit ? mountSubmit() : mountDisplay();
+  });
+
+  /* ─── DISPLAY MODE ─────────────────────────────────── */
+  function mountDisplay() {
+    document.body.insertAdjacentHTML('beforeend', `
+      <div id="display">
+        <div class="header">
+          <div class="header-left">
+            <div class="accent-bar"></div>
+            <div>
+              <div class="event-title">피트스탑 AX</div>
+              <div class="event-sub">Live 응원메세지</div>
+            </div>
+          </div>
+          <div class="header-right">
+            <span id="msg-count"></span>
+            <div class="live-badge">
+              <span class="live-dot"></span>
+              <span class="live-text">LIVE</span>
+            </div>
+            <button class="reset-btn" onclick="resetMessages()">초기화</button>
+          </div>
+        </div>
+        <div class="main-area">
+          <div id="feed">
+            <div class="empty-state" id="empty">
+              <div class="empty-emoji">🚀</div>
+              <div>아직 응원 메세지가 없어요<br/>QR을 스캔하고 첫 번째 응원을 보내보세요!</div>
+            </div>
+          </div>
+          <div class="qr-sidebar">
+            <div id="qrcode"></div>
+            <div style="text-align:center;">
+              <div class="qr-title">QR 스캔하기</div>
+              <div class="qr-sub">응원 메세지를<br/>보내보세요!</div>
+            </div>
+            <div id="resp-count">0 responded</div>
+          </div>
+        </div>
+      </div>
+    `);
+
+    const qrUrl = location.origin + location.pathname + '#submit';
+    new QRCode(document.getElementById('qrcode'), {
+      text: qrUrl, width: 152, height: 152,
+      colorDark: '#111111', colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+
+    let count = 0;
+    let initialLoad = true;
+
+    msgsRef.orderBy('t', 'asc').onSnapshot((snapshot) => {
+      const feed = document.getElementById('feed');
+
+      snapshot.docChanges().forEach((change) => {
+        if (change.type !== 'added') return;
+        const m = change.doc.data();
+
+        const empty = document.getElementById('empty');
+        if (empty) empty.remove();
+
+        count++;
+        document.getElementById('msg-count').textContent  = count + '개의 응원';
+        document.getElementById('resp-count').textContent = count + ' responded';
+
+        const c    = colorFor(m.name);
+        const card = document.createElement('div');
+        card.className = 'msg-card' + (initialLoad ? '' : ' animate');
+        card.innerHTML = `
+          <div class="avatar" style="background:${c}18;border:2px solid ${c}35;color:${c};">
+            ${esc(m.name.slice(0, 2))}
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div class="msg-name">${esc(m.name)}</div>
+            <div class="msg-text">${esc(m.msg)}</div>
+          </div>`;
+        feed.prepend(card);
+      });
+
+      initialLoad = false;
+    });
+  }
+
+  async function resetMessages() {
+    if (!confirm('모든 응원 메세지를 삭제할까요?')) return;
+    const snapshot = await msgsRef.get();
+    const batch    = db.batch();
+    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+    location.reload();
+  }
+
+  /* ─── SUBMIT MODE ──────────────────────────────────── */
+  function mountSubmit() {
+    document.body.insertAdjacentHTML('beforeend', `
+      <div id="submit-view">
+        <div class="submit-card">
+          <div class="submit-header">
+            <div class="submit-accent"></div>
+            <div>
+              <div class="submit-title">피트스탑 AX</div>
+              <div class="submit-sub">Live 응원메세지</div>
+            </div>
+          </div>
+          <div class="form-box">
+            <div class="form-field">
+              <div class="field-label">이름 (닉네임)</div>
+              <input id="inp-name" class="field-input" type="text"
+                placeholder="예: 동현 / 백엔드팀" maxlength="15" autocomplete="off"/>
+            </div>
+            <div class="form-field">
+              <div class="field-label">응원 메세지</div>
+              <textarea id="inp-msg" class="field-input"
+                placeholder="팀원들에게 응원을 보내보세요 💪" maxlength="80"></textarea>
+              <div id="char-count">0 / 80</div>
+            </div>
+            <button class="send-btn" id="send-btn" onclick="sendMessage()">
+              응원 보내기 →
+            </button>
+          </div>
+          <div id="success-msg">🎉 응원이 메인 화면에 나타났어요!</div>
+        </div>
+      </div>
+    `);
+
+    document.getElementById('inp-msg').addEventListener('input', function () {
+      document.getElementById('char-count').textContent = this.value.length + ' / 80';
+    });
+  }
+
+  async function sendMessage() {
+    const name = document.getElementById('inp-name').value.trim();
+    const msg  = document.getElementById('inp-msg').value.trim();
+    if (!name || !msg) { alert('이름과 메세지를 모두 입력해주세요!'); return; }
+
+    const btn = document.getElementById('send-btn');
+    btn.textContent = '전송 중...';
+    btn.disabled    = true;
+
+    try {
+      await msgsRef.add({
+        name,
+        msg,
+        t: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      document.getElementById('success-msg').style.display = 'block';
+      document.getElementById('inp-msg').value           = '';
+      document.getElementById('char-count').textContent  = '0 / 80';
+      btn.textContent = '또 보내기 →';
+      btn.disabled    = false;
+      setTimeout(() => {
+        document.getElementById('success-msg').style.display = 'none';
+      }, 3500);
+    } catch (e) {
+      alert('오류가 발생했습니다.\n' + e.message);
+      btn.textContent = '응원 보내기 →';
+      btn.disabled    = false;
+    }
+  }
+</script>
+
+</body>
+</html>
