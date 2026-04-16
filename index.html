@@ -4,126 +4,187 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>피트스탑 AX — Live 응원메세지</title>
-
-  <!-- Firebase SDK (Firestore) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-
-  <!-- QR Code generator -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    :root { --red: #FF3A2F; }
-    body { font-family: -apple-system, 'Apple SD Gothic Neo', 'Pretendard', sans-serif; background: white; }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    :root{--red:#FF3A2F;}
+    body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard',sans-serif;background:#f5f4f0;overflow:hidden;}
 
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to   { opacity: 1; transform: translateY(0); }
+    @keyframes popIn{
+      0%{opacity:0;transform:translateY(40px) rotate(var(--r)) scale(0.85);}
+      70%{transform:translateY(-6px) rotate(var(--r)) scale(1.04);}
+      100%{opacity:1;transform:translateY(0) rotate(var(--r)) scale(1);}
     }
-    @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes pulse   { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.2;}}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 
-    #display { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-
-    .header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 28px; border-bottom: 1.5px solid #f4f4f4; flex-shrink: 0;
+    /* ── HEADER ── */
+    .header{
+      position:fixed;top:0;left:0;right:0;z-index:100;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:12px 24px;
+      background:rgba(245,244,240,0.92);
+      backdrop-filter:blur(8px);
+      border-bottom:1px solid #e8e6e0;
     }
-    .header-left  { display: flex; align-items: center; gap: 14px; }
-    .accent-bar   { width: 5px; height: 44px; background: var(--red); border-radius: 3px; }
-    .event-title  { font-size: 24px; font-weight: 900; color: #111; letter-spacing: -0.8px; }
-    .event-sub    { font-size: 12px; color: #bbb; margin-top: 1px; }
-    .header-right { display: flex; align-items: center; gap: 12px; }
-    #msg-count    { font-size: 12px; color: #ccc; font-weight: 500; }
-    .live-badge   { display: flex; align-items: center; gap: 5px; }
-    .live-dot     { width: 7px; height: 7px; background: #22c55e; border-radius: 50%; animation: pulse 1.8s infinite; }
-    .live-text    { font-size: 10px; font-weight: 900; color: #22c55e; letter-spacing: 1.2px; }
-    .reset-btn    { font-size: 10px; color: #ddd; background: none; border: none; cursor: pointer; padding: 4px 10px; border-radius: 6px; }
-    .reset-btn:hover { color: #999; }
+    .header-left{display:flex;align-items:center;gap:12px;}
+    .accent-bar{width:4px;height:38px;background:var(--red);border-radius:3px;cursor:pointer;flex-shrink:0;}
+    .event-title{font-size:20px;font-weight:900;color:#111;letter-spacing:-0.5px;}
+    .event-sub{font-size:11px;color:#bbb;margin-top:1px;}
+    .header-right{display:flex;align-items:center;gap:10px;}
+    .live-badge{display:flex;align-items:center;gap:5px;}
+    .live-dot{width:6px;height:6px;background:#22c55e;border-radius:50%;animation:pulse 1.8s infinite;}
+    .live-text{font-size:10px;font-weight:900;color:#22c55e;letter-spacing:1px;}
+    #msg-count{font-size:11px;color:#bbb;}
+    .admin-badge{font-size:10px;font-weight:700;color:white;background:var(--red);padding:2px 8px;border-radius:4px;display:none;}
+    .reset-btn{font-size:10px;color:#ccc;background:none;border:none;cursor:pointer;padding:3px 8px;border-radius:4px;display:none;}
+    .reset-btn:hover{color:#999;}
 
-    .main-area { flex: 1; display: flex; overflow: hidden; }
-
-    #feed {
-      flex: 1; overflow-y: auto; padding: 16px 22px;
-      display: flex; flex-direction: column; gap: 9px;
+    /* ── FEED (포스트잇 보드) ── */
+    #board{
+      position:fixed;top:64px;left:0;right:340px;bottom:0;
+      overflow-y:auto;
+      padding:20px 16px 20px 20px;
+      display:flex;flex-wrap:wrap;align-content:flex-start;
+      gap:0;
     }
-    .empty-state {
-      display: flex; flex-direction: column; align-items: center;
-      justify-content: center; color: #ddd; font-size: 14px;
-      text-align: center; gap: 10px; padding: 4rem 0; line-height: 1.8;
+
+    /* ── POST-IT CARD ── */
+    .note{
+      --r:0deg;
+      width:168px;height:168px;
+      margin:8px;
+      padding:14px 14px 10px;
+      border-radius:3px;
+      display:flex;flex-direction:column;justify-content:space-between;
+      position:relative;
+      transform:rotate(var(--r));
+      animation:popIn 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards;
+      box-shadow:3px 4px 10px rgba(0,0,0,0.12);
+      cursor:default;
+      transition:transform 0.2s, box-shadow 0.2s;
     }
-    .empty-emoji { font-size: 40px; }
-
-    .msg-card {
-      display: flex; gap: 13px; padding: 13px 16px;
-      background: white; border: 1px solid #f0f0f0; border-radius: 14px; flex-shrink: 0;
+    .note:hover{transform:rotate(0deg) scale(1.06);box-shadow:6px 8px 20px rgba(0,0,0,0.18);z-index:10;}
+    .note-name{font-size:11px;font-weight:700;color:rgba(0,0,0,0.45);letter-spacing:0.3px;}
+    .note-msg{font-size:14px;font-weight:500;color:rgba(0,0,0,0.75);line-height:1.55;word-break:break-word;flex:1;margin-top:6px;}
+    .note-del{
+      position:absolute;top:6px;right:8px;
+      background:none;border:none;cursor:pointer;
+      font-size:13px;color:rgba(0,0,0,0.2);
+      opacity:0;transition:opacity 0.15s;padding:2px 4px;
     }
-    .msg-card.animate { animation: slideIn 0.38s ease forwards; }
+    .note:hover .note-del{opacity:1;}
+    .note-del:hover{color:rgba(180,0,0,0.6);}
+    .admin-mode .note:hover .note-del{opacity:1;}
 
-    .avatar {
-      width: 42px; height: 42px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; font-size: 13px; font-weight: 700;
+    /* 포스트잇 색상 팔레트 */
+    .nc0{background:#fff9a3;}
+    .nc1{background:#ffd6e0;}
+    .nc2{background:#c3f0ca;}
+    .nc3{background:#c8e6ff;}
+    .nc4{background:#ffd9a8;}
+    .nc5{background:#e8c8ff;}
+    .nc6{background:#b5ead7;}
+    .nc7{background:#ffcba4;}
+
+    /* 빈 상태 */
+    .empty-state{
+      width:100%;padding:5rem 0;
+      display:flex;flex-direction:column;align-items:center;
+      color:#bbb;font-size:14px;text-align:center;gap:10px;line-height:1.8;
     }
-    .msg-name { font-size: 12px; font-weight: 700; color: #111; margin-bottom: 3px; }
-    .msg-text { font-size: 15px; color: #333; line-height: 1.55; word-break: break-word; }
+    .empty-emoji{font-size:40px;}
 
-    .qr-sidebar {
-      width: 192px; border-left: 1.5px solid #f4f4f4;
-      padding: 22px 16px; display: flex; flex-direction: column;
-      align-items: center; gap: 14px; flex-shrink: 0;
+    /* ── 우측 패널 (QR + 입력폼) ── */
+    .side-panel{
+      position:fixed;top:64px;right:0;bottom:0;width:320px;
+      background:white;border-left:1px solid #e8e6e0;
+      display:flex;flex-direction:column;overflow:hidden;
     }
-    #qrcode     { width: 152px; height: 152px; border-radius: 10px; overflow: hidden; }
-    .qr-title   { font-size: 14px; font-weight: 900; color: var(--red); margin-bottom: 5px; }
-    .qr-sub     { font-size: 11px; color: #bbb; line-height: 1.7; }
-    #resp-count { font-size: 11px; color: #ddd; }
 
-    #submit-view {
-      min-height: 100vh; display: flex; align-items: center;
-      justify-content: center; padding: 1.5rem; background: #f7f7f7;
+    /* QR 섹션 */
+    .qr-section{
+      padding:20px 20px 16px;
+      border-bottom:1px solid #f0ede8;
+      display:flex;align-items:center;gap:14px;flex-shrink:0;
     }
-    .submit-card   { width: 100%; max-width: 360px; }
-    .submit-header { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
-    .submit-accent { width: 4px; height: 38px; background: var(--red); border-radius: 3px; }
-    .submit-title  { font-size: 19px; font-weight: 900; color: #111; letter-spacing: -0.3px; }
-    .submit-sub    { font-size: 11px; color: #bbb; margin-top: 1px; }
+    #qrcode{width:72px;height:72px;flex-shrink:0;border-radius:6px;overflow:hidden;}
+    .qr-info{}
+    .qr-title{font-size:13px;font-weight:700;color:var(--red);margin-bottom:3px;}
+    .qr-sub{font-size:11px;color:#bbb;line-height:1.6;}
+    #resp-count{font-size:10px;color:#ccc;margin-top:3px;}
 
-    .form-box { background: white; border-radius: 18px; padding: 22px; border: 1px solid #eaeaea; }
-    .form-field { margin-bottom: 18px; }
-    .field-label { font-size: 10px; font-weight: 700; color: #aaa; letter-spacing: 1.2px; margin-bottom: 8px; }
-
-    .field-input {
-      width: 100%; padding: 11px 14px; border: 1.5px solid #eee; border-radius: 10px;
-      font-size: 15px; outline: none; font-family: inherit; color: #111; background: white;
-      transition: border-color 0.18s;
+    /* 입력폼 섹션 */
+    .form-section{
+      flex:1;padding:18px 20px;
+      display:flex;flex-direction:column;gap:12px;overflow-y:auto;
     }
-    .field-input:focus { border-color: var(--red); }
-    textarea.field-input { resize: none; height: 88px; line-height: 1.55; }
-    #char-count { text-align: right; font-size: 10px; color: #ddd; margin-top: 3px; }
+    .form-title{font-size:12px;font-weight:700;color:#999;letter-spacing:0.5px;}
 
-    .send-btn {
-      width: 100%; margin-top: 4px; padding: 13px;
-      background: var(--red); color: white; border: none; border-radius: 10px;
-      font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
-      transition: opacity 0.15s;
+    .field-label{font-size:10px;font-weight:700;color:#bbb;letter-spacing:1px;margin-bottom:5px;}
+    .field-input{
+      width:100%;padding:9px 12px;
+      border:1.5px solid #eee;border-radius:8px;
+      font-size:14px;outline:none;font-family:inherit;color:#111;background:white;
+      transition:border-color 0.18s;
     }
-    .send-btn:hover    { opacity: 0.88; }
-    .send-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .field-input:focus{border-color:var(--red);}
+    textarea.field-input{resize:none;height:76px;line-height:1.5;}
+    #char-count{text-align:right;font-size:10px;color:#ddd;margin-top:2px;}
 
-    #success-msg {
-      display: none; margin-top: 12px; text-align: center;
-      padding: 13px 16px; background: white; border-radius: 12px;
-      border: 1px solid #ffe0de; color: var(--red); font-weight: 600; font-size: 14px;
+    .send-btn{
+      width:100%;padding:11px;
+      background:var(--red);color:white;border:none;border-radius:8px;
+      font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;
+      transition:opacity 0.15s;
+    }
+    .send-btn:hover{opacity:0.88;}
+    .send-btn:disabled{opacity:0.5;cursor:not-allowed;}
+
+    #success-msg{
+      text-align:center;padding:10px;background:#fff5f5;
+      border-radius:8px;color:var(--red);font-weight:600;font-size:13px;
+      display:none;animation:fadeUp 0.3s ease;
+    }
+
+    /* ── 모바일 submit 뷰 ── */
+    #submit-view{
+      min-height:100vh;display:flex;align-items:center;
+      justify-content:center;padding:1.5rem;background:#f7f7f7;
+    }
+    .submit-card{width:100%;max-width:360px;}
+    .submit-header{display:flex;align-items:center;gap:10px;margin-bottom:24px;}
+    .submit-accent{width:4px;height:38px;background:var(--red);border-radius:3px;}
+    .submit-title{font-size:19px;font-weight:900;color:#111;letter-spacing:-0.3px;}
+    .submit-sub{font-size:11px;color:#bbb;margin-top:1px;}
+    .form-box{background:white;border-radius:18px;padding:22px;border:1px solid #eaeaea;}
+    .form-field{margin-bottom:16px;}
+    .m-send-btn{
+      width:100%;margin-top:4px;padding:13px;
+      background:var(--red);color:white;border:none;border-radius:10px;
+      font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity 0.15s;
+    }
+    .m-send-btn:hover{opacity:0.88;}
+    .m-send-btn:disabled{opacity:0.5;cursor:not-allowed;}
+    #m-success{
+      display:none;margin-top:12px;text-align:center;padding:13px 16px;
+      background:white;border-radius:12px;border:1px solid #ffe0de;
+      color:var(--red);font-weight:600;font-size:14px;
+    }
+
+    /* ── 반응형 (모바일에서 display 보드 숨김) ── */
+    @media(max-width:640px){
+      #board{right:0;bottom:0;}
+      .side-panel{display:none;}
     }
   </style>
 </head>
 <body>
 
 <!-- ============================================================
-     🔧 FIREBASE CONFIG
-     Firebase Console → 프로젝트 설정 → 내 앱 → SDK 설정 및 구성
-     아래 YOUR_* 값을 실제 값으로 교체하세요 (databaseURL 불필요)
+     🔧 FIREBASE CONFIG — YOUR_* 값을 실제 값으로 교체
      ============================================================ -->
 <script>
   const firebaseConfig = {
@@ -134,125 +195,200 @@
     messagingSenderId: "452975502054",
     appId:             "1:452975502054:web:1ddfe8ece45d19708b9127"
   };
-
   firebase.initializeApp(firebaseConfig);
   const db      = firebase.firestore();
   const msgsRef = db.collection('ax-pitstop-messages');
 </script>
 
 <script>
-  const PALETTE = [
-    '#FF3A2F','#E91E63','#9C27B0','#3F51B5',
-    '#2196F3','#009688','#FF6B35','#00ACC1','#F44336'
-  ];
-  function colorFor(s) {
-    let h = 0;
-    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-    return PALETTE[Math.abs(h) % PALETTE.length];
+  const NOTE_COLORS = ['nc0','nc1','nc2','nc3','nc4','nc5','nc6','nc7'];
+  const ROTATIONS   = [-2.5,-1.8,-1,-0.5,0,0.5,1,1.8,2.5];
+  const ADMIN_PW    = 'catchtable';  // ← 비밀번호 변경 가능
+
+  function noteColor(s){
+    let h=0; for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))|0;
+    return NOTE_COLORS[Math.abs(h)%NOTE_COLORS.length];
   }
-  function esc(t) {
-    return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  function noteRot(id){
+    let h=0; for(let i=0;i<id.length;i++) h=(h*31+id.charCodeAt(i))|0;
+    return ROTATIONS[Math.abs(h)%ROTATIONS.length];
   }
+  function esc(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
   const isSubmit = location.hash === '#submit';
   document.addEventListener('DOMContentLoaded', () => {
     isSubmit ? mountSubmit() : mountDisplay();
   });
 
-  /* ─── DISPLAY MODE ─────────────────────────────────── */
-  function mountDisplay() {
-    document.body.insertAdjacentHTML('beforeend', `
-      <div id="display">
-        <div class="header">
-          <div class="header-left">
-            <div class="accent-bar"></div>
-            <div>
-              <div class="event-title">피트스탑 AX</div>
-              <div class="event-sub">Live 응원메세지</div>
-            </div>
-          </div>
-          <div class="header-right">
-            <span id="msg-count"></span>
-            <div class="live-badge">
-              <span class="live-dot"></span>
-              <span class="live-text">LIVE</span>
-            </div>
-            <button class="reset-btn" onclick="resetMessages()">초기화</button>
+  /* ─── DISPLAY ─────────────────────────────────────── */
+  function mountDisplay(){
+    document.body.insertAdjacentHTML('beforeend',`
+      <div class="header">
+        <div class="header-left">
+          <div class="accent-bar" id="admin-bar" onclick="adminClick()"></div>
+          <div>
+            <div class="event-title">피트스탑 AX</div>
+            <div class="event-sub">Live 응원메세지</div>
           </div>
         </div>
-        <div class="main-area">
-          <div id="feed">
-            <div class="empty-state" id="empty">
-              <div class="empty-emoji">🚀</div>
-              <div>아직 응원 메세지가 없어요<br/>QR을 스캔하고 첫 번째 응원을 보내보세요!</div>
-            </div>
-          </div>
-          <div class="qr-sidebar">
-            <div id="qrcode"></div>
-            <div style="text-align:center;">
-              <div class="qr-title">QR 스캔하기</div>
-              <div class="qr-sub">응원 메세지를<br/>보내보세요!</div>
-            </div>
+        <div class="header-right">
+          <span id="admin-badge" class="admin-badge">ADMIN</span>
+          <span id="msg-count"></span>
+          <div class="live-badge"><span class="live-dot"></span><span class="live-text">LIVE</span></div>
+          <button class="reset-btn" id="reset-btn" onclick="resetMessages()">전체삭제</button>
+        </div>
+      </div>
+
+      <div id="board">
+        <div class="empty-state" id="empty">
+          <div class="empty-emoji">🚀</div>
+          <div>아직 응원 메세지가 없어요<br/>QR 스캔하거나 오른쪽에 바로 써보세요!</div>
+        </div>
+      </div>
+
+      <div class="side-panel">
+        <div class="qr-section">
+          <div id="qrcode"></div>
+          <div class="qr-info">
+            <div class="qr-title">QR 스캔하기</div>
+            <div class="qr-sub">모바일에서<br/>바로 참여 가능</div>
             <div id="resp-count">0 responded</div>
           </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-title">여기서 바로 쓰기</div>
+          <div>
+            <div class="field-label">이름 (닉네임)</div>
+            <input id="d-name" class="field-input" type="text"
+              placeholder="예: 동현 / 백엔드팀" maxlength="15" autocomplete="off"/>
+          </div>
+          <div>
+            <div class="field-label">응원 메세지</div>
+            <textarea id="d-msg" class="field-input"
+              placeholder="팀원들에게 응원을 보내보세요 💪" maxlength="80"></textarea>
+            <div id="char-count">0 / 80</div>
+          </div>
+          <button class="send-btn" id="d-send" onclick="sendDisplay()">응원 보내기 →</button>
+          <div id="success-msg">🎉 붙었어요!</div>
         </div>
       </div>
     `);
 
     const qrUrl = location.origin + location.pathname + '#submit';
-    new QRCode(document.getElementById('qrcode'), {
-      text: qrUrl, width: 152, height: 152,
-      colorDark: '#111111', colorLight: '#ffffff',
-      correctLevel: QRCode.CorrectLevel.M
+    new QRCode(document.getElementById('qrcode'),{
+      text:qrUrl, width:72, height:72,
+      colorDark:'#111', colorLight:'#fff',
+      correctLevel:QRCode.CorrectLevel.M
     });
 
-    let count = 0;
-    let initialLoad = true;
+    document.getElementById('d-msg').addEventListener('input',function(){
+      document.getElementById('char-count').textContent = this.value.length+' / 80';
+    });
 
-    msgsRef.orderBy('t', 'asc').onSnapshot((snapshot) => {
-      const feed = document.getElementById('feed');
-
-      snapshot.docChanges().forEach((change) => {
-        if (change.type !== 'added') return;
-        const m = change.doc.data();
+    let count=0, initialLoad=true;
+    msgsRef.orderBy('t','asc').onSnapshot((snapshot)=>{
+      const board = document.getElementById('board');
+      snapshot.docChanges().forEach((change)=>{
+        if(change.type!=='added') return;
+        const m     = change.doc.data();
+        const docId = change.doc.id;
 
         const empty = document.getElementById('empty');
-        if (empty) empty.remove();
+        if(empty) empty.remove();
 
         count++;
-        document.getElementById('msg-count').textContent  = count + '개의 응원';
-        document.getElementById('resp-count').textContent = count + ' responded';
+        document.getElementById('msg-count').textContent  = count+'개';
+        document.getElementById('resp-count').textContent = count+' responded';
 
-        const c    = colorFor(m.name);
-        const card = document.createElement('div');
-        card.className = 'msg-card' + (initialLoad ? '' : ' animate');
-        card.innerHTML = `
-          <div class="avatar" style="background:${c}18;border:2px solid ${c}35;color:${c};">
-            ${esc(m.name.slice(0, 2))}
-          </div>
-          <div style="flex:1;min-width:0;">
-            <div class="msg-name">${esc(m.name)}</div>
-            <div class="msg-text">${esc(m.msg)}</div>
-          </div>`;
-        feed.prepend(card);
+        const rot  = noteRot(docId);
+        const note = document.createElement('div');
+        note.className = 'note '+noteColor(m.name);
+        note.dataset.id = docId;
+        note.style.setProperty('--r', rot+'deg');
+        note.style.animationDelay = initialLoad ? '0ms' : '0ms';
+        note.innerHTML = `
+          <button class="note-del" onclick="deleteOne('${docId}',this)">✕</button>
+          <div class="note-msg">${esc(m.msg)}</div>
+          <div class="note-name">${esc(m.name)}</div>`;
+        board.prepend(note);
       });
-
       initialLoad = false;
     });
   }
 
-  async function resetMessages() {
-    if (!confirm('모든 응원 메세지를 삭제할까요?')) return;
-    const snapshot = await msgsRef.get();
-    const batch    = db.batch();
-    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+  async function sendDisplay(){
+    const name = document.getElementById('d-name').value.trim();
+    const msg  = document.getElementById('d-msg').value.trim();
+    if(!name||!msg){alert('이름과 메세지를 입력해주세요!');return;}
+    const btn  = document.getElementById('d-send');
+    btn.textContent='전송 중...'; btn.disabled=true;
+    try{
+      await msgsRef.add({name,msg,t:firebase.firestore.FieldValue.serverTimestamp()});
+      document.getElementById('success-msg').style.display='block';
+      document.getElementById('d-msg').value='';
+      document.getElementById('char-count').textContent='0 / 80';
+      btn.textContent='또 보내기 →'; btn.disabled=false;
+      setTimeout(()=>{ document.getElementById('success-msg').style.display='none'; },2500);
+    }catch(e){
+      alert('오류: '+e.message);
+      btn.textContent='응원 보내기 →'; btn.disabled=false;
+    }
+  }
+
+  /* ─── ADMIN ────────────────────────────────────────── */
+  let adminClicks=0, adminTimer=null, isAdmin=false;
+  function adminClick(){
+    adminClicks++;
+    clearTimeout(adminTimer);
+    adminTimer=setTimeout(()=>{ adminClicks=0; },2000);
+    if(adminClicks>=5){
+      adminClicks=0;
+      if(isAdmin){
+        isAdmin=false;
+        document.body.classList.remove('admin-mode');
+        document.getElementById('admin-badge').style.display='none';
+        document.getElementById('reset-btn').style.display='none';
+      } else {
+        const pw=prompt('관리자 비밀번호');
+        if(pw===ADMIN_PW){
+          isAdmin=true;
+          document.body.classList.add('admin-mode');
+          document.getElementById('admin-badge').style.display='inline-block';
+          document.getElementById('reset-btn').style.display='inline-block';
+        } else if(pw!==null){
+          alert('비밀번호가 틀렸습니다');
+        }
+      }
+    }
+  }
+
+  async function resetMessages(){
+    if(!confirm('모든 메세지를 삭제할까요?'))return;
+    const snap=await msgsRef.get();
+    const batch=db.batch();
+    snap.docs.forEach(d=>batch.delete(d.ref));
     await batch.commit();
     location.reload();
   }
 
-  /* ─── SUBMIT MODE ──────────────────────────────────── */
-  function mountSubmit() {
-    document.body.insertAdjacentHTML('beforeend', `
+  async function deleteOne(docId,btn){
+    if(!isAdmin)return;
+    btn.textContent='...';
+    try{
+      await msgsRef.doc(docId).delete();
+      const note=btn.closest('.note');
+      note.style.transition='opacity 0.2s,transform 0.2s';
+      note.style.opacity='0';
+      note.style.transform='scale(0.8)';
+      setTimeout(()=>note.remove(),200);
+    }catch(e){ btn.textContent='✕'; }
+  }
+
+  /* ─── SUBMIT (모바일 QR) ────────────────────────────── */
+  function mountSubmit(){
+    document.body.style.overflow='auto';
+    document.body.insertAdjacentHTML('beforeend',`
       <div id="submit-view">
         <div class="submit-card">
           <div class="submit-header">
@@ -265,59 +401,44 @@
           <div class="form-box">
             <div class="form-field">
               <div class="field-label">이름 (닉네임)</div>
-              <input id="inp-name" class="field-input" type="text"
+              <input id="m-name" class="field-input" type="text"
                 placeholder="예: 동현 / 백엔드팀" maxlength="15" autocomplete="off"/>
             </div>
             <div class="form-field">
               <div class="field-label">응원 메세지</div>
-              <textarea id="inp-msg" class="field-input"
+              <textarea id="m-msg" class="field-input"
                 placeholder="팀원들에게 응원을 보내보세요 💪" maxlength="80"></textarea>
-              <div id="char-count">0 / 80</div>
+              <div id="m-char">0 / 80</div>
             </div>
-            <button class="send-btn" id="send-btn" onclick="sendMessage()">
-              응원 보내기 →
-            </button>
+            <button class="m-send-btn" id="m-send" onclick="sendMobile()">응원 보내기 →</button>
           </div>
-          <div id="success-msg">🎉 응원이 메인 화면에 나타났어요!</div>
+          <div id="m-success">🎉 응원이 메인 화면에 나타났어요!</div>
         </div>
       </div>
     `);
-
-    document.getElementById('inp-msg').addEventListener('input', function () {
-      document.getElementById('char-count').textContent = this.value.length + ' / 80';
+    document.getElementById('m-msg').addEventListener('input',function(){
+      document.getElementById('m-char').textContent=this.value.length+' / 80';
     });
   }
 
-  async function sendMessage() {
-    const name = document.getElementById('inp-name').value.trim();
-    const msg  = document.getElementById('inp-msg').value.trim();
-    if (!name || !msg) { alert('이름과 메세지를 모두 입력해주세요!'); return; }
-
-    const btn = document.getElementById('send-btn');
-    btn.textContent = '전송 중...';
-    btn.disabled    = true;
-
-    try {
-      await msgsRef.add({
-        name,
-        msg,
-        t: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      document.getElementById('success-msg').style.display = 'block';
-      document.getElementById('inp-msg').value           = '';
-      document.getElementById('char-count').textContent  = '0 / 80';
-      btn.textContent = '또 보내기 →';
-      btn.disabled    = false;
-      setTimeout(() => {
-        document.getElementById('success-msg').style.display = 'none';
-      }, 3500);
-    } catch (e) {
-      alert('오류가 발생했습니다.\n' + e.message);
-      btn.textContent = '응원 보내기 →';
-      btn.disabled    = false;
+  async function sendMobile(){
+    const name=document.getElementById('m-name').value.trim();
+    const msg =document.getElementById('m-msg').value.trim();
+    if(!name||!msg){alert('이름과 메세지를 모두 입력해주세요!');return;}
+    const btn=document.getElementById('m-send');
+    btn.textContent='전송 중...'; btn.disabled=true;
+    try{
+      await msgsRef.add({name,msg,t:firebase.firestore.FieldValue.serverTimestamp()});
+      document.getElementById('m-success').style.display='block';
+      document.getElementById('m-msg').value='';
+      document.getElementById('m-char').textContent='0 / 80';
+      btn.textContent='또 보내기 →'; btn.disabled=false;
+      setTimeout(()=>{ document.getElementById('m-success').style.display='none'; },3000);
+    }catch(e){
+      alert('오류: '+e.message);
+      btn.textContent='응원 보내기 →'; btn.disabled=false;
     }
   }
 </script>
-
 </body>
 </html>
