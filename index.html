@@ -98,8 +98,14 @@
 
     /* ── 하트 ── */
     .heart{
-      position:fixed;bottom:90px;pointer-events:none;z-index:200;
+      position:fixed;pointer-events:none;z-index:200;
       animation:floatHeart 2.8s ease-out forwards;
+    }
+    @keyframes floatHeart{
+      0%{opacity:1;transform:translateY(0) scale(1) rotate(0deg);}
+      40%{opacity:0.9;transform:translateY(-120px) scale(1.3) rotate(-8deg);}
+      70%{opacity:0.6;transform:translateY(-240px) scale(0.9) rotate(6deg);}
+      100%{opacity:0;transform:translateY(-380px) scale(0.5) rotate(-4deg);}
     }
 
     /* ── QR 패널 (우측) ── */
@@ -318,12 +324,15 @@
         const h=document.createElement('div');
         h.className='heart';
         h.textContent=HEARTS[Math.floor(Math.random()*HEARTS.length)];
-        h.style.left=(15+Math.random()*55)+'vw';
-        h.style.fontSize=(18+Math.random()*18)+'px';
-        h.style.animationDuration=(2.2+Math.random()*1.2)+'s';
+        h.style.left=(15+Math.random()*65)+'vw';
+        // 화면 아래 10% ~ 70% 사이 랜덤 위치에서 시작
+        const startBottom=10+Math.random()*60;
+        h.style.bottom=startBottom+'vh';
+        h.style.fontSize=(16+Math.random()*22)+'px';
+        h.style.animationDuration=(1.8+Math.random()*1.6)+'s';
         document.body.appendChild(h);
         setTimeout(()=>h.remove(),4000);
-      },i*100);
+      },i*80);
     }
   }
 
