@@ -3,189 +3,197 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>피트스탑 AX — Live 응원메세지</title>
+  <title>피트스탑 AX — Live</title>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     :root{--red:#FF3A2F;}
-    body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard',sans-serif;background:#f5f4f0;overflow:hidden;}
+    html,body{height:100%;background:#0a0a0a;overflow:hidden;font-family:-apple-system,'Apple SD Gothic Neo','Pretendard',sans-serif;}
 
-    @keyframes popIn{
-      0%{opacity:0;transform:translateY(40px) rotate(var(--r)) scale(0.85);}
-      70%{transform:translateY(-6px) rotate(var(--r)) scale(1.04);}
-      100%{opacity:1;transform:translateY(0) rotate(var(--r)) scale(1);}
-    }
     @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.2;}}
-    @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+    @keyframes msgUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+    @keyframes floatHeart{
+      0%{opacity:1;transform:translateY(0) scale(1) rotate(0deg);}
+      40%{transform:translateY(-100px) scale(1.3) rotate(-8deg);}
+      70%{transform:translateY(-200px) scale(0.9) rotate(6deg);}
+      100%{opacity:0;transform:translateY(-320px) scale(0.5) rotate(-4deg);}
+    }
+    @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
 
-    /* ── HEADER ── */
-    .header{
+    /* ── 상단 헤더 ── */
+    .hdr{
       position:fixed;top:0;left:0;right:0;z-index:100;
       display:flex;align-items:center;justify-content:space-between;
-      padding:12px 24px;
-      background:rgba(245,244,240,0.92);
-      backdrop-filter:blur(8px);
-      border-bottom:1px solid #e8e6e0;
+      padding:14px 18px 10px;
+      background:linear-gradient(to bottom,rgba(0,0,0,0.8) 0%,transparent 100%);
     }
-    .header-left{display:flex;align-items:center;gap:12px;}
-    .accent-bar{width:4px;height:38px;background:var(--red);border-radius:3px;cursor:pointer;flex-shrink:0;}
-    .event-title{font-size:20px;font-weight:900;color:#111;letter-spacing:-0.5px;}
-    .event-sub{font-size:11px;color:#bbb;margin-top:1px;}
-    .header-right{display:flex;align-items:center;gap:10px;}
-    .live-badge{display:flex;align-items:center;gap:5px;}
-    .live-dot{width:6px;height:6px;background:#22c55e;border-radius:50%;animation:pulse 1.8s infinite;}
-    .live-text{font-size:10px;font-weight:900;color:#22c55e;letter-spacing:1px;}
-    #msg-count{font-size:11px;color:#bbb;}
-    .admin-badge{font-size:10px;font-weight:700;color:white;background:var(--red);padding:2px 8px;border-radius:4px;display:none;}
-    .reset-btn{font-size:10px;color:#ccc;background:none;border:none;cursor:pointer;padding:3px 8px;border-radius:4px;display:none;}
-    .reset-btn:hover{color:#999;}
-
-    /* ── FEED (포스트잇 보드) ── */
-    #board{
-      position:fixed;top:64px;left:0;right:480px;bottom:0;
-      overflow-y:auto;
-      padding:20px 16px 20px 20px;
-      display:flex;flex-wrap:wrap;align-content:flex-start;
-      gap:0;
+    .hdr-left{display:flex;align-items:center;gap:10px;}
+    .hdr-avatar{
+      width:40px;height:40px;border-radius:50%;
+      background:linear-gradient(135deg,var(--red) 0%,#ff6b35 100%);
+      display:flex;align-items:center;justify-content:center;
+      font-size:14px;font-weight:900;color:white;
+      border:2px solid rgba(255,255,255,0.25);
+      cursor:pointer;flex-shrink:0;
     }
-
-    /* ── POST-IT CARD ── */
-    .note{
-      --r:0deg;
-      width:168px;min-height:168px;
-      margin:8px;
-      padding:14px 14px 10px;
-      border-radius:3px;
-      display:flex;flex-direction:column;justify-content:space-between;
-      position:relative;
-      transform:rotate(var(--r));
-      animation:popIn 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards;
-      box-shadow:3px 4px 10px rgba(0,0,0,0.12);
-      cursor:default;
-      transition:transform 0.2s, box-shadow 0.2s;
+    .hdr-name{font-size:14px;font-weight:700;color:white;line-height:1.3;}
+    .live-pill{
+      display:inline-flex;align-items:center;gap:4px;
+      background:var(--red);color:white;
+      font-size:9px;font-weight:900;letter-spacing:1.2px;
+      padding:2px 7px;border-radius:4px;margin-top:2px;
     }
-    .note:hover{transform:rotate(0deg) scale(1.06);box-shadow:6px 8px 20px rgba(0,0,0,0.18);z-index:10;}
-    .note-name{font-size:11px;font-weight:700;color:rgba(0,0,0,0.45);letter-spacing:0.3px;}
-    .note-msg{font-size:14px;font-weight:500;color:rgba(0,0,0,0.75);line-height:1.55;word-break:break-word;flex:1;margin-top:6px;}
-    .note-del{
-      position:absolute;top:6px;right:8px;
-      background:none;border:none;cursor:pointer;
-      font-size:13px;color:rgba(0,0,0,0.2);
-      opacity:0;transition:opacity 0.15s;padding:2px 4px;
+    .live-dot{width:5px;height:5px;background:white;border-radius:50%;animation:pulse 1.5s infinite;}
+    .hdr-right{display:flex;align-items:center;gap:8px;}
+    .viewer-pill{
+      display:flex;align-items:center;gap:5px;
+      background:rgba(255,255,255,0.1);backdrop-filter:blur(8px);
+      padding:5px 12px;border-radius:20px;
+      font-size:13px;font-weight:600;color:white;
     }
-    .note:hover .note-del{opacity:1;}
-    .note-del:hover{color:rgba(180,0,0,0.6);}
-    .admin-mode .note:hover .note-del{opacity:1;}
+    #admin-badge{font-size:10px;font-weight:700;color:white;background:var(--red);padding:3px 10px;border-radius:20px;display:none;}
+    #reset-btn{font-size:11px;color:rgba(255,255,255,0.4);background:none;border:1px solid rgba(255,255,255,0.15);cursor:pointer;padding:4px 10px;border-radius:20px;display:none;}
+    #reset-btn:hover{color:white;}
 
-    /* 포스트잇 색상 팔레트 */
-    .nc0{background:#fff9a3;}
-    .nc1{background:#ffd6e0;}
-    .nc2{background:#c3f0ca;}
-    .nc3{background:#c8e6ff;}
-    .nc4{background:#ffd9a8;}
-    .nc5{background:#e8c8ff;}
-    .nc6{background:#b5ead7;}
-    .nc7{background:#ffcba4;}
-
-    /* 빈 상태 */
-    .empty-state{
-      width:100%;padding:5rem 0;
-      display:flex;flex-direction:column;align-items:center;
-      color:#bbb;font-size:14px;text-align:center;gap:10px;line-height:1.8;
+    /* ── 메세지 피드 ── */
+    #feed{
+      position:fixed;
+      bottom:80px;left:16px;
+      width:min(440px, calc(100vw - 170px));
+      max-height:70vh;
+      display:flex;flex-direction:column;
+      gap:7px;
+      overflow:hidden;
+      z-index:50;
     }
-    .empty-emoji{font-size:40px;}
+    .mrow{
+      display:flex;align-items:flex-end;gap:8px;
+      animation:msgUp 0.38s cubic-bezier(0.34,1.3,0.64,1) forwards;
+    }
+    .mavatar{
+      width:30px;height:30px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      font-size:10px;font-weight:700;color:white;flex-shrink:0;
+      margin-bottom:1px;
+    }
+    .mbubble{
+      background:rgba(255,255,255,0.13);
+      backdrop-filter:blur(14px);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:18px 18px 18px 4px;
+      padding:7px 13px;
+      max-width:320px;
+    }
+    .mname{font-size:11px;font-weight:700;margin-bottom:2px;}
+    .mtext{font-size:14px;color:rgba(255,255,255,0.9);line-height:1.45;word-break:break-word;}
+    .mdel{
+      width:22px;height:22px;border-radius:50%;
+      background:rgba(255,50,50,0.65);border:none;cursor:pointer;
+      color:white;font-size:10px;flex-shrink:0;
+      display:none;align-items:center;justify-content:center;
+      margin-bottom:3px;
+    }
+    .admin-mode .mrow:hover .mdel{display:flex;}
 
-    /* ── 우측 패널 (QR + 입력폼) ── */
-    .side-panel{
-      position:fixed;top:64px;right:0;bottom:0;width:480px;
-      background:white;border-left:1px solid #e8e6e0;
-      display:flex;flex-direction:column;overflow:hidden;
+    /* ── 하트 ── */
+    .heart{
+      position:fixed;bottom:90px;pointer-events:none;z-index:200;
+      animation:floatHeart 2.8s ease-out forwards;
     }
 
-    /* QR 섹션 */
-    .qr-section{
-      padding:20px 24px 16px;
-      border-bottom:1px solid #f0ede8;
-      display:flex;flex-direction:column;align-items:center;gap:12px;flex-shrink:0;
+    /* ── QR 패널 (우측) ── */
+    .qr-panel{
+      position:fixed;top:72px;right:16px;z-index:80;
+      background:rgba(255,255,255,0.08);
+      backdrop-filter:blur(16px);
+      border:1px solid rgba(255,255,255,0.12);
+      border-radius:18px;padding:16px;
+      display:flex;flex-direction:column;align-items:center;gap:10px;
     }
-    #qrcode{width:160px;height:160px;flex-shrink:0;border-radius:8px;overflow:hidden;}
-    .qr-info{text-align:center;}
-    .qr-title{font-size:14px;font-weight:700;color:var(--red);margin-bottom:4px;}
-    .qr-sub{font-size:12px;color:#bbb;line-height:1.6;}
-    #resp-count{font-size:11px;color:#ccc;margin-top:4px;}
+    #qrcode{width:130px;height:130px;border-radius:8px;overflow:hidden;}
+    .qr-label{font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);letter-spacing:0.5px;}
+    #resp-count{font-size:10px;color:rgba(255,255,255,0.3);}
 
-    /* 입력폼 섹션 */
-    .form-section{
-      flex:1;padding:20px 24px;
-      display:flex;flex-direction:column;gap:14px;overflow-y:auto;
+    /* ── 하단 입력바 ── */
+    .input-bar{
+      position:fixed;bottom:0;left:0;right:0;z-index:100;
+      padding:10px 14px 22px;
+      background:linear-gradient(to top,rgba(0,0,0,0.9) 60%,transparent 100%);
+      display:flex;align-items:center;gap:8px;
     }
-    .form-title{font-size:13px;font-weight:700;color:#999;letter-spacing:0.5px;}
+    .ibox{
+      flex:1;display:flex;align-items:center;
+      background:rgba(255,255,255,0.1);
+      backdrop-filter:blur(12px);
+      border:1px solid rgba(255,255,255,0.15);
+      border-radius:26px;padding:0 14px;gap:8px;
+    }
+    .ibox:focus-within{border-color:rgba(255,255,255,0.35);}
+    #inp-name{
+      width:76px;flex-shrink:0;
+      background:none;border:none;outline:none;
+      font-size:13px;font-weight:600;color:rgba(255,255,255,0.65);
+      font-family:inherit;
+      border-right:1px solid rgba(255,255,255,0.12);
+      padding:12px 10px 12px 0;
+    }
+    #inp-name::placeholder{color:rgba(255,255,255,0.25);}
+    #inp-msg{
+      flex:1;background:none;border:none;outline:none;
+      font-size:14px;color:white;font-family:inherit;padding:12px 0;
+    }
+    #inp-msg::placeholder{color:rgba(255,255,255,0.25);}
+    .hbtn{
+      width:44px;height:44px;border-radius:50%;flex-shrink:0;
+      background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);
+      cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;
+      transition:transform 0.15s;
+    }
+    .hbtn:hover{transform:scale(1.1);}
+    .hbtn:active{transform:scale(0.92);}
+    .sbtn{
+      width:44px;height:44px;border-radius:50%;flex-shrink:0;
+      background:var(--red);border:none;cursor:pointer;
+      font-size:17px;color:white;display:flex;align-items:center;justify-content:center;
+      transition:transform 0.15s,opacity 0.15s;
+    }
+    .sbtn:hover{transform:scale(1.08);}
+    .sbtn:disabled{opacity:0.4;cursor:not-allowed;}
 
-    .field-label{font-size:10px;font-weight:700;color:#bbb;letter-spacing:1px;margin-bottom:6px;}
-    .field-input{
-      width:100%;padding:10px 14px;
-      border:1.5px solid #eee;border-radius:8px;
-      font-size:15px;outline:none;font-family:inherit;color:#111;background:white;
+    /* ── 모바일 submit ── */
+    #submit-view{min-height:100vh;display:flex;align-items:flex-end;background:#0a0a0a;}
+    .s-panel{
+      width:100%;background:#1c1c1e;border-radius:26px 26px 0 0;
+      padding:20px 20px 40px;
+    }
+    .s-drag{width:36px;height:4px;background:rgba(255,255,255,0.18);border-radius:2px;margin:0 auto 20px;}
+    .s-title{font-size:18px;font-weight:900;color:white;margin-bottom:3px;}
+    .s-sub{font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:22px;}
+    .s-lbl{font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:1.2px;margin-bottom:8px;}
+    .s-inp{
+      width:100%;padding:13px 16px;margin-bottom:14px;
+      background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);
+      border-radius:12px;font-size:15px;color:white;font-family:inherit;outline:none;
       transition:border-color 0.18s;
     }
-    .field-input:focus{border-color:var(--red);}
-    textarea.field-input{resize:none;height:100px;line-height:1.55;}
-    #char-count{text-align:right;font-size:11px;color:#ddd;margin-top:3px;}
-
-    .send-btn{
-      width:100%;padding:13px;
-      background:var(--red);color:white;border:none;border-radius:8px;
-      font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;
-      transition:opacity 0.15s;
+    .s-inp:focus{border-color:var(--red);}
+    .s-inp::placeholder{color:rgba(255,255,255,0.2);}
+    textarea.s-inp{resize:none;height:88px;line-height:1.55;}
+    #m-char{text-align:right;font-size:10px;color:rgba(255,255,255,0.2);margin-top:-10px;margin-bottom:14px;}
+    .s-send{
+      width:100%;padding:15px;background:var(--red);color:white;
+      border:none;border-radius:12px;font-size:16px;font-weight:700;
+      cursor:pointer;font-family:inherit;transition:opacity 0.15s;
     }
-    .send-btn:hover{opacity:0.88;}
-    .send-btn:disabled{opacity:0.5;cursor:not-allowed;}
-
-    #success-msg{
-      text-align:center;padding:10px;background:#fff5f5;
-      border-radius:8px;color:var(--red);font-weight:600;font-size:13px;
-      display:none;animation:fadeUp 0.3s ease;
-    }
-
-    /* ── 모바일 submit 뷰 ── */
-    #submit-view{
-      min-height:100vh;display:flex;align-items:center;
-      justify-content:center;padding:1.5rem;background:#f7f7f7;
-    }
-    .submit-card{width:100%;max-width:360px;}
-    .submit-header{display:flex;align-items:center;gap:10px;margin-bottom:24px;}
-    .submit-accent{width:4px;height:38px;background:var(--red);border-radius:3px;}
-    .submit-title{font-size:19px;font-weight:900;color:#111;letter-spacing:-0.3px;}
-    .submit-sub{font-size:11px;color:#bbb;margin-top:1px;}
-    .form-box{background:white;border-radius:18px;padding:22px;border:1px solid #eaeaea;}
-    .form-field{margin-bottom:16px;}
-    .m-send-btn{
-      width:100%;margin-top:4px;padding:13px;
-      background:var(--red);color:white;border:none;border-radius:10px;
-      font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity 0.15s;
-    }
-    .m-send-btn:hover{opacity:0.88;}
-    .m-send-btn:disabled{opacity:0.5;cursor:not-allowed;}
-    #m-success{
-      display:none;margin-top:12px;text-align:center;padding:13px 16px;
-      background:white;border-radius:12px;border:1px solid #ffe0de;
-      color:var(--red);font-weight:600;font-size:14px;
-    }
-
-    /* ── 반응형 (모바일에서 display 보드 숨김) ── */
-    @media(max-width:640px){
-      #board{right:0;bottom:0;}
-      .side-panel{display:none;}
-    }
+    .s-send:hover{opacity:0.88;}
+    .s-send:disabled{opacity:0.4;cursor:not-allowed;}
+    #m-ok{display:none;margin-top:14px;text-align:center;color:rgba(255,255,255,0.5);font-size:14px;animation:fadeIn 0.3s;}
   </style>
 </head>
 <body>
 
-<!-- ============================================================
-     🔧 FIREBASE CONFIG — YOUR_* 값을 실제 값으로 교체
-     ============================================================ -->
 <script>
   const firebaseConfig = {
     apiKey:            "AIzaSyB5VpEbNq3rnkPX8ccvBpAZ6gwew9rraOw",
@@ -196,223 +204,177 @@
     appId:             "1:452975502054:web:1ddfe8ece45d19708b9127"
   };
   firebase.initializeApp(firebaseConfig);
-  const db      = firebase.firestore();
-  const msgsRef = db.collection('ax-pitstop-messages');
+  const db=firebase.firestore();
+  const msgsRef=db.collection('ax-pitstop-messages');
 </script>
 
 <script>
-  const NOTE_COLORS = ['nc0','nc1','nc2','nc3','nc4','nc5','nc6','nc7'];
-  const ROTATIONS   = [-2.5,-1.8,-1,-0.5,0,0.5,1,1.8,2.5];
-  const ADMIN_PW    = 'catchtable';  // ← 비밀번호 변경 가능
+  const PALETTE=['#FF3A2F','#E91E63','#AB47BC','#5C6BC0','#29B6F6','#26A69A','#FFA726','#EF5350'];
+  const HEARTS =['❤️','🧡','💛','💚','💙','💜','🔥','✨','💥','🎉'];
+  const ADMIN_PW='catchtable';
 
-  function noteColor(s){
-    let h=0; for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))|0;
-    return NOTE_COLORS[Math.abs(h)%NOTE_COLORS.length];
-  }
-  function noteRot(id){
-    let h=0; for(let i=0;i<id.length;i++) h=(h*31+id.charCodeAt(i))|0;
-    return ROTATIONS[Math.abs(h)%ROTATIONS.length];
-  }
-  function esc(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function colorFor(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return PALETTE[Math.abs(h)%PALETTE.length];}
+  function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-  const isSubmit = location.hash === '#submit';
-  document.addEventListener('DOMContentLoaded', () => {
-    isSubmit ? mountSubmit() : mountDisplay();
-  });
+  const isSubmit=location.hash==='#submit';
+  document.addEventListener('DOMContentLoaded',()=>{isSubmit?mountSubmit():mountDisplay();});
 
-  /* ─── DISPLAY ─────────────────────────────────────── */
+  /* ─── DISPLAY ── */
   function mountDisplay(){
     document.body.insertAdjacentHTML('beforeend',`
-      <div class="header">
-        <div class="header-left">
-          <div class="accent-bar" id="admin-bar" onclick="adminClick()"></div>
+      <div class="hdr">
+        <div class="hdr-left">
+          <div class="hdr-avatar" id="admin-tap" onclick="adminClick()">AX</div>
           <div>
-            <div class="event-title">피트스탑 AX</div>
-            <div class="event-sub">Live 응원메세지</div>
+            <div class="hdr-name">피트스탑 AX 2025</div>
+            <div><span class="live-pill"><span class="live-dot"></span>LIVE</span></div>
           </div>
         </div>
-        <div class="header-right">
-          <span id="admin-badge" class="admin-badge">ADMIN</span>
-          <span id="msg-count"></span>
-          <div class="live-badge"><span class="live-dot"></span><span class="live-text">LIVE</span></div>
-          <button class="reset-btn" id="reset-btn" onclick="resetMessages()">전체삭제</button>
+        <div class="hdr-right">
+          <span id="admin-badge">ADMIN</span>
+          <button id="reset-btn" onclick="resetMessages()">전체삭제</button>
+          <div class="viewer-pill">👁 <span id="msg-count">0</span></div>
         </div>
       </div>
 
-      <div id="board">
-        <div class="empty-state" id="empty">
-          <div class="empty-emoji">🚀</div>
-          <div>아직 응원 메세지가 없어요<br/>QR 스캔하거나 오른쪽에 바로 써보세요!</div>
-        </div>
+      <div id="feed"></div>
+
+      <div class="qr-panel">
+        <div id="qrcode"></div>
+        <div class="qr-label">QR 스캔하기</div>
+        <div id="resp-count">0 responded</div>
       </div>
 
-      <div class="side-panel">
-        <div class="qr-section">
-          <div id="qrcode"></div>
-          <div class="qr-info">
-            <div class="qr-title">QR 스캔하기</div>
-            <div class="qr-sub">모바일에서<br/>바로 참여 가능</div>
-            <div id="resp-count">0 responded</div>
-          </div>
+      <div class="input-bar">
+        <div class="ibox">
+          <input id="inp-name" type="text" placeholder="이름" maxlength="12" autocomplete="off"/>
+          <input id="inp-msg"  type="text" placeholder="응원 메세지..." maxlength="60"
+            onkeydown="if(event.key==='Enter')sendMsg()"/>
         </div>
-
-        <div class="form-section">
-          <div class="form-title">여기서 바로 쓰기</div>
-          <div>
-            <div class="field-label">이름 (닉네임)</div>
-            <input id="d-name" class="field-input" type="text"
-              placeholder="예: 동현 / 백엔드팀" maxlength="15" autocomplete="off"/>
-          </div>
-          <div>
-            <div class="field-label">응원 메세지</div>
-            <textarea id="d-msg" class="field-input"
-              placeholder="팀원들에게 응원을 보내보세요 💪" maxlength="80"></textarea>
-            <div id="char-count">0 / 80</div>
-          </div>
-          <button class="send-btn" id="d-send" onclick="sendDisplay()">응원 보내기 →</button>
-          <div id="success-msg">🎉 붙었어요!</div>
-        </div>
+        <button class="hbtn" onclick="spawnHearts(8)">❤️</button>
+        <button class="sbtn" id="d-send" onclick="sendMsg()">➤</button>
       </div>
     `);
 
-    const qrUrl = location.origin + location.pathname + '#submit';
-    new QRCode(document.getElementById('qrcode'),{
-      text:qrUrl, width:160, height:160,
-      colorDark:'#111', colorLight:'#fff',
-      correctLevel:QRCode.CorrectLevel.M
-    });
+    const qrUrl=location.origin+location.pathname+'#submit';
+    new QRCode(document.getElementById('qrcode'),{text:qrUrl,width:130,height:130,colorDark:'#111',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});
 
-    document.getElementById('d-msg').addEventListener('input',function(){
-      document.getElementById('char-count').textContent = this.value.length+' / 80';
-    });
-
-    let count=0, initialLoad=true;
-    msgsRef.orderBy('t','asc').onSnapshot((snapshot)=>{
-      const board = document.getElementById('board');
-      snapshot.docChanges().forEach((change)=>{
-        if(change.type!=='added') return;
-        const m     = change.doc.data();
-        const docId = change.doc.id;
-
-        const empty = document.getElementById('empty');
-        if(empty) empty.remove();
-
-        count++;
-        document.getElementById('msg-count').textContent  = count+'개';
-        document.getElementById('resp-count').textContent = count+' responded';
-
-        const rot  = noteRot(docId);
-        const note = document.createElement('div');
-        note.className = 'note '+noteColor(m.name);
-        note.dataset.id = docId;
-        note.style.setProperty('--r', rot+'deg');
-        note.style.animationDelay = initialLoad ? '0ms' : '0ms';
-        note.innerHTML = `
-          <button class="note-del" onclick="deleteOne('${docId}',this)">✕</button>
-          <div class="note-msg">${esc(m.msg)}</div>
-          <div class="note-name">${esc(m.name)}</div>`;
-        board.prepend(note);
+    let count=0,initialLoad=true;
+    msgsRef.orderBy('t','asc').onSnapshot((snap)=>{
+      snap.docChanges().forEach((ch)=>{
+        if(ch.type==='added'){
+          const m=ch.doc.data();
+          count++;
+          document.getElementById('msg-count').textContent=count;
+          document.getElementById('resp-count').textContent=count+' responded';
+          addRow(m,ch.doc.id,!initialLoad);
+          if(!initialLoad)spawnHearts(4);
+        }
+        if(ch.type==='removed'){
+          const el=document.querySelector(`[data-id="${ch.doc.id}"]`);
+          if(el){el.style.opacity='0';el.style.transform='scale(0.85)';el.style.transition='all 0.2s';setTimeout(()=>el.remove(),200);}
+        }
       });
-      initialLoad = false;
+      initialLoad=false;
     });
   }
 
-  async function sendDisplay(){
-    const name = document.getElementById('d-name').value.trim();
-    const msg  = document.getElementById('d-msg').value.trim();
+  function addRow(m,docId,animate){
+    const feed=document.getElementById('feed');
+    const c=colorFor(m.name);
+    const row=document.createElement('div');
+    row.className='mrow';
+    row.dataset.id=docId;
+    if(!animate)row.style.animation='none';
+    row.innerHTML=`
+      <div class="mavatar" style="background:${c};">${esc(m.name.slice(0,2))}</div>
+      <div class="mbubble">
+        <div class="mname" style="color:${c};">${esc(m.name)}</div>
+        <div class="mtext">${esc(m.msg)}</div>
+      </div>
+      <button class="mdel" onclick="deleteOne('${docId}',this)">✕</button>`;
+    feed.appendChild(row);
+    const rows=feed.querySelectorAll('.mrow');
+    if(rows.length>25)rows[0].remove();
+  }
+
+  async function sendMsg(){
+    const name=document.getElementById('inp-name').value.trim();
+    const msg=document.getElementById('inp-msg').value.trim();
     if(!name||!msg){alert('이름과 메세지를 입력해주세요!');return;}
-    const btn  = document.getElementById('d-send');
-    btn.textContent='전송 중...'; btn.disabled=true;
+    const btn=document.getElementById('d-send');
+    btn.disabled=true;
     try{
       await msgsRef.add({name,msg,t:firebase.firestore.FieldValue.serverTimestamp()});
-      document.getElementById('success-msg').style.display='block';
-      document.getElementById('d-msg').value='';
-      document.getElementById('char-count').textContent='0 / 80';
-      btn.textContent='또 보내기 →'; btn.disabled=false;
-      setTimeout(()=>{ document.getElementById('success-msg').style.display='none'; },2500);
-    }catch(e){
-      alert('오류: '+e.message);
-      btn.textContent='응원 보내기 →'; btn.disabled=false;
+      document.getElementById('inp-msg').value='';
+      spawnHearts(6);
+    }catch(e){alert('오류: '+e.message);}
+    btn.disabled=false;
+  }
+
+  function spawnHearts(n){
+    n=n||6;
+    for(let i=0;i<n;i++){
+      setTimeout(()=>{
+        const h=document.createElement('div');
+        h.className='heart';
+        h.textContent=HEARTS[Math.floor(Math.random()*HEARTS.length)];
+        h.style.left=(15+Math.random()*55)+'vw';
+        h.style.fontSize=(18+Math.random()*18)+'px';
+        h.style.animationDuration=(2.2+Math.random()*1.2)+'s';
+        document.body.appendChild(h);
+        setTimeout(()=>h.remove(),4000);
+      },i*100);
     }
   }
 
-  /* ─── ADMIN ────────────────────────────────────────── */
-  let adminClicks=0, adminTimer=null, isAdmin=false;
+  /* ── ADMIN ── */
+  let aClicks=0,aTimer=null,isAdmin=false;
   function adminClick(){
-    adminClicks++;
-    clearTimeout(adminTimer);
-    adminTimer=setTimeout(()=>{ adminClicks=0; },2000);
-    if(adminClicks>=5){
-      adminClicks=0;
+    aClicks++;clearTimeout(aTimer);
+    aTimer=setTimeout(()=>{aClicks=0;},2000);
+    if(aClicks>=5){
+      aClicks=0;
       if(isAdmin){
-        isAdmin=false;
-        document.body.classList.remove('admin-mode');
+        isAdmin=false;document.body.classList.remove('admin-mode');
         document.getElementById('admin-badge').style.display='none';
         document.getElementById('reset-btn').style.display='none';
       } else {
         const pw=prompt('관리자 비밀번호');
         if(pw===ADMIN_PW){
-          isAdmin=true;
-          document.body.classList.add('admin-mode');
+          isAdmin=true;document.body.classList.add('admin-mode');
           document.getElementById('admin-badge').style.display='inline-block';
           document.getElementById('reset-btn').style.display='inline-block';
-        } else if(pw!==null){
-          alert('비밀번호가 틀렸습니다');
-        }
+        } else if(pw!==null)alert('비밀번호가 틀렸습니다');
       }
     }
   }
-
   async function resetMessages(){
     if(!confirm('모든 메세지를 삭제할까요?'))return;
-    const snap=await msgsRef.get();
-    const batch=db.batch();
-    snap.docs.forEach(d=>batch.delete(d.ref));
-    await batch.commit();
-    location.reload();
+    const snap=await msgsRef.get();const batch=db.batch();
+    snap.docs.forEach(d=>batch.delete(d.ref));await batch.commit();location.reload();
   }
-
   async function deleteOne(docId,btn){
-    if(!isAdmin)return;
-    btn.textContent='...';
-    try{
-      await msgsRef.doc(docId).delete();
-      const note=btn.closest('.note');
-      note.style.transition='opacity 0.2s,transform 0.2s';
-      note.style.opacity='0';
-      note.style.transform='scale(0.8)';
-      setTimeout(()=>note.remove(),200);
-    }catch(e){ btn.textContent='✕'; }
+    if(!isAdmin)return;btn.textContent='...';
+    try{await msgsRef.doc(docId).delete();}catch(e){btn.textContent='✕';}
   }
 
-  /* ─── SUBMIT (모바일 QR) ────────────────────────────── */
+  /* ─── SUBMIT (모바일) ── */
   function mountSubmit(){
     document.body.style.overflow='auto';
     document.body.insertAdjacentHTML('beforeend',`
       <div id="submit-view">
-        <div class="submit-card">
-          <div class="submit-header">
-            <div class="submit-accent"></div>
-            <div>
-              <div class="submit-title">피트스탑 AX</div>
-              <div class="submit-sub">Live 응원메세지</div>
-            </div>
-          </div>
-          <div class="form-box">
-            <div class="form-field">
-              <div class="field-label">이름 (닉네임)</div>
-              <input id="m-name" class="field-input" type="text"
-                placeholder="예: 동현 / 백엔드팀" maxlength="15" autocomplete="off"/>
-            </div>
-            <div class="form-field">
-              <div class="field-label">응원 메세지</div>
-              <textarea id="m-msg" class="field-input"
-                placeholder="팀원들에게 응원을 보내보세요 💪" maxlength="80"></textarea>
-              <div id="m-char">0 / 80</div>
-            </div>
-            <button class="m-send-btn" id="m-send" onclick="sendMobile()">응원 보내기 →</button>
-          </div>
-          <div id="m-success">🎉 응원이 메인 화면에 나타났어요!</div>
+        <div class="s-panel">
+          <div class="s-drag"></div>
+          <div class="s-title">피트스탑 AX 🚀</div>
+          <div class="s-sub">Live 응원메세지</div>
+          <div class="s-lbl">이름 (닉네임)</div>
+          <input id="m-name" class="s-inp" type="text" placeholder="예: 동현 / 백엔드팀" maxlength="15" autocomplete="off"/>
+          <div class="s-lbl">응원 메세지</div>
+          <textarea id="m-msg" class="s-inp" placeholder="팀원들에게 응원을 보내보세요 💪" maxlength="80"></textarea>
+          <div id="m-char">0 / 80</div>
+          <button class="s-send" id="m-send" onclick="sendMobile()">응원 보내기 →</button>
+          <div id="m-ok">🎉 응원이 화면에 나타났어요!</div>
         </div>
       </div>
     `);
@@ -420,24 +382,18 @@
       document.getElementById('m-char').textContent=this.value.length+' / 80';
     });
   }
-
   async function sendMobile(){
     const name=document.getElementById('m-name').value.trim();
-    const msg =document.getElementById('m-msg').value.trim();
+    const msg=document.getElementById('m-msg').value.trim();
     if(!name||!msg){alert('이름과 메세지를 모두 입력해주세요!');return;}
-    const btn=document.getElementById('m-send');
-    btn.textContent='전송 중...'; btn.disabled=true;
+    const btn=document.getElementById('m-send');btn.textContent='전송 중...';btn.disabled=true;
     try{
       await msgsRef.add({name,msg,t:firebase.firestore.FieldValue.serverTimestamp()});
-      document.getElementById('m-success').style.display='block';
-      document.getElementById('m-msg').value='';
-      document.getElementById('m-char').textContent='0 / 80';
-      btn.textContent='또 보내기 →'; btn.disabled=false;
-      setTimeout(()=>{ document.getElementById('m-success').style.display='none'; },3000);
-    }catch(e){
-      alert('오류: '+e.message);
-      btn.textContent='응원 보내기 →'; btn.disabled=false;
-    }
+      document.getElementById('m-ok').style.display='block';
+      document.getElementById('m-msg').value='';document.getElementById('m-char').textContent='0 / 80';
+      btn.textContent='또 보내기 →';btn.disabled=false;
+      setTimeout(()=>{document.getElementById('m-ok').style.display='none';},3000);
+    }catch(e){alert('오류: '+e.message);btn.textContent='응원 보내기 →';btn.disabled=false;}
   }
 </script>
 </body>
