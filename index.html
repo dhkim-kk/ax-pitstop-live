@@ -122,10 +122,8 @@ let zoneIdx=0;
 const cardQueue=[];
 
 function getPos(){
-  const bw=document.getElementById('board').offsetWidth||window.innerWidth;
-  const bh=(document.getElementById('board').offsetHeight)||(window.innerHeight-146);
-  if(zoneIdx<ZONES.length){const z=ZONES[zoneIdx++];return{x:(z.x/100)*bw+rnd(-20,20),y:(z.y/100)*bh+rnd(-15,15)};}
-  return{x:rnd(80,bw-80),y:rnd(60,bh-60)};
+  // 캔버스 전체에 완전 랜덤 배치
+  return{x:rnd(200,3800), y:rnd(200,2800)};
 }
 function colorFor(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return PALETTE[Math.abs(h)%PALETTE.length];}
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
@@ -180,6 +178,7 @@ function mountDisplay(){
     </div>
     <input type="file" id="d-file-input" accept="image/*" style="display:none" onchange="dFileSelected(this)"/>
     <div class="input-bar">
+      <div style="display:flex;justify-content:center;margin-bottom:6px;"><button onclick="goHome()" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);font-size:12px;font-weight:600;padding:5px 18px;border-radius:20px;cursor:pointer;backdrop-filter:blur(8px);" onmouseover="this.style.background='rgba(255,255,255,.22)'" onmouseout="this.style.background='rgba(255,255,255,.12)'">⌂ 홈으로</button></div>
       <div class="preview-row" id="d-preview-row">
         <img id="d-preview-img" src="" alt=""/>
         <div class="preview-label" id="d-preview-label"></div>
@@ -280,6 +279,8 @@ function addCard(m,docId,animate){
       card.style.left=pos.x+'px';card.style.top=pos.y+'px';
       card.style.transform=`translate(-50%,-50%) scale(1) rotate(${rot}deg)`;
       setTimeout(()=>{card.style.zIndex='11';card.style.transition='box-shadow .25s';},950);
+      // 새 카드 위치로 카메라 이동
+      panToCard(pos.x,pos.y);
     },1400);
   }else{
     card.style.cssText=`position:absolute;left:${pos.x}px;top:${pos.y}px;transform:translate(-50%,-50%) scale(1) rotate(${rot}deg);z-index:11;transition:box-shadow .25s;`;
@@ -296,6 +297,35 @@ function startCardDrag(e,card){
   dragOY=t.clientY-br.top-panY-parseFloat(card.style.top||0);
   dragCard=card;card.style.zIndex='300';card.style.transition='box-shadow .25s';
   if(e.cancelable)e.preventDefault();
+}
+
+function panToCard(cx,cy){
+  const board=document.getElementById('board');
+  const bw=board.offsetWidth,bh=board.offsetHeight;
+  // 카드가 화면 중앙에 오도록 pan 조정
+  const targetPanX=bw/2-cx*scale;
+  const targetPanY=bh/2-cy*scale;
+  animatePan(targetPanX,targetPanY,600);
+}
+
+function animatePan(tpx,tpy,dur){
+  const startPX=panX,startPY=panY,startT=performance.now();
+  function step(now){
+    const p=Math.min(1,(now-startT)/dur);
+    const ease=1-Math.pow(1-p,3);
+    panX=startPX+(tpx-startPX)*ease;
+    panY=startPY+(tpy-startPY)*ease;
+    applyPan();
+    if(p<1)requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function goHome(){
+  const board=document.getElementById('board');
+  const bw=board.offsetWidth,bh=board.offsetHeight;
+  scale=1;
+  animatePan(0,0,500);
 }
 
 function initPasteAndDrop(){
