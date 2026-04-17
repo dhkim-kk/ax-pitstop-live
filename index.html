@@ -170,54 +170,55 @@ function applyPan(){const cv=document.getElementById('canvas');if(cv)cv.style.tr
 function buildLogoZones(){
   try{
     const cv=document.createElement('canvas');
-    cv.width=1400;cv.height=520;
+    cv.width=600;cv.height=220;
     const ctx=cv.getContext('2d');
-    if(!ctx)throw new Error('no 2d context');
-    ctx.fillStyle='#000';ctx.fillRect(0,0,cv.width,cv.height);
-    ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';
-    // 폰트 두 가지 시도
-    const fonts=['bold 210px "Arial Black","Arial",sans-serif','bold 200px Impact,sans-serif'];
-    let zones=[];
-    for(const font of fonts){
-      ctx.clearRect(0,0,cv.width,cv.height);
-      ctx.fillStyle='#000';ctx.fillRect(0,0,cv.width,cv.height);
-      ctx.fillStyle='#fff';
-      ctx.font=font;
-      ctx.fillText('CATCH',cv.width/2,cv.height*0.3);
-      ctx.fillText('TABLE',cv.width/2,cv.height*0.75);
-      const data=ctx.getImageData(0,0,cv.width,cv.height).data;
-      zones=[];
-      const step=16;
-      for(let y=0;y<cv.height;y+=step){
-        for(let x=0;x<cv.width;x+=step){
-          const idx4=(y*cv.width+x)*4;
-          if(data[idx4]>100){
-            zones.push({x:400+(x/cv.width)*5200,y:600+(y/cv.height)*3800});
-          }
+    if(!ctx)return[];
+    ctx.fillStyle='#000';ctx.fillRect(0,0,600,220);
+    ctx.fillStyle='#fff';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.font='bold 88px Arial,sans-serif';
+    ctx.fillText('CATCH',300,65);
+    ctx.font='bold 88px Arial,sans-serif';
+    ctx.fillText('TABLE',300,155);
+    const data=ctx.getImageData(0,0,600,220).data;
+    const zones=[];const step=10;
+    for(let y=0;y<220;y+=step){
+      for(let x=0;x<600;x+=step){
+        if(data[(y*600+x)*4]>80){
+          // 정규화된 좌표 (0~1)
+          zones.push({nx:x/600, ny:y/220});
         }
       }
-      if(zones.length>50)break; // 충분히 나왔으면 OK
     }
-    if(zones.length<10)throw new Error('not enough zones: '+zones.length);
-    for(let i=zones.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[zones[i],zones[j]]=[zones[j],zones[i]];}
+    for(let i=zones.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [zones[i],zones[j]]=[zones[j],zones[i]];
+    }
     console.log('Logo zones:',zones.length);
     return zones;
   }catch(e){
-    console.warn('buildLogoZones fallback:',e);
-    // 폴백: 랜덤 배치
-    return [];
+    console.warn('buildLogoZones error:',e);
+    return[];
   }
 }
 
-let ZONES=[];
-let zoneIdx=0;
+function getBoardSize(){
+  const b=document.getElementById('board');
+  return{w:b?b.offsetWidth:1280, h:b?b.offsetHeight:700};
+}
 
 function getPos(){
-  if(ZONES.length===0)return{x:rnd(300,5500),y:rnd(400,4500)};
+  const {w,h}=getBoardSize();
+  if(ZONES.length===0)return{x:rnd(80,w-80),y:rnd(60,h-60)};
   const z=ZONES[zoneIdx%ZONES.length];
   zoneIdx++;
-  return{x:z.x+rnd(-22,22),y:z.y+rnd(-22,22)};
+  // 보드 크기에 맞춰 스케일, 여백 10%
+  return{
+    x: w*0.05 + z.nx*(w*0.9) + rnd(-15,15),
+    y: h*0.05 + z.ny*(h*0.9) + rnd(-12,12)
+  };
 }
+
 function colorFor(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return PALETTE[Math.abs(h)%PALETTE.length];}
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function rnd(a,b){return a+Math.random()*(b-a);}
@@ -436,8 +437,6 @@ function animatePan(tpx,tpy,dur){
 }
 
 function goHome(){
-  const board=document.getElementById('board');
-  const bw=board.offsetWidth,bh=board.offsetHeight;
   scale=1;
   animatePan(0,0,500);
 }
