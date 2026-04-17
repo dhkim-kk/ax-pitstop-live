@@ -283,8 +283,12 @@ async function sendMsg(){
     let imageUrl='';
     if(dFile){
       btn.textContent='📤';
-      try{imageUrl=await uploadImage(dFile);}
-      catch(e){console.warn('Storage error:',e.message);}
+      try{
+        imageUrl=await Promise.race([uploadImage(dFile),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),12000))]);
+      }catch(e){
+        console.warn('Storage:',e.message);
+        if(!confirm('사진 업로드 실패.\n사진 없이 메세지만 보낼까요?')){btn.textContent='➤';btn.disabled=false;return;}
+      }
     }
     await msgsRef.add({name,msg,imageUrl,t:firebase.firestore.FieldValue.serverTimestamp()});
     document.getElementById('inp-msg').value='';
@@ -392,8 +396,12 @@ async function sendMobile(){
     let imageUrl='';
     if(mFile){
       btn.textContent='사진 업로드 중...';
-      try{imageUrl=await uploadImage(mFile);}
-      catch(e){console.warn('Storage:',e.message);}
+      try{
+        imageUrl=await Promise.race([uploadImage(mFile),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),12000))]);
+      }catch(e){
+        console.warn('Storage:',e.message);
+        if(!confirm('사진 업로드 실패.\n사진 없이 메세지만 보낼까요?')){btn.textContent='응원 보내기 →';btn.disabled=false;return;}
+      }
     }
     await msgsRef.add({name,msg,imageUrl,t:firebase.firestore.FieldValue.serverTimestamp()});
     document.getElementById('m-ok').style.display='block';
