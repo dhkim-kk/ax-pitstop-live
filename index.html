@@ -245,7 +245,21 @@ async function uploadImage(file){
 }
 
 const isSubmit=location.hash==='#submit';
-document.addEventListener('DOMContentLoaded',()=>{isSubmit?mountSubmit():mountDisplay();});
+document.addEventListener('DOMContentLoaded',()=>{
+  try{
+    isSubmit?mountSubmit():mountDisplay();
+  }catch(err){
+    console.error('Mount error:',err);
+    // 에러 발생시 화면에 표시
+    document.body.insertAdjacentHTML('beforeend',
+      '<div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;font-size:14px;text-align:center;z-index:9999;">'+
+      '<div style="font-size:24px;margin-bottom:12px;">⚠️</div>'+
+      '<div>로딩 오류: '+err.message+'</div>'+
+      '<button onclick="location.reload()" style="margin-top:16px;padding:8px 20px;background:#FF3A2F;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;">새로고침</button>'+
+      '</div>'
+    );
+  }
+});
 
 /* ─── DISPLAY ── */
 let dFile=null;
@@ -297,17 +311,19 @@ function mountDisplay(){
   document.getElementById('d-color-row').innerHTML=swatchHTML('d','pickColorD');
 
   // 실시간 하트 리액션 수신
-  const tenSecAgo=new Date(Date.now()-10000);
-  reactRef.where('t','>',tenSecAgo).orderBy('t','asc').onSnapshot((snap)=>{
-    snap.docChanges().forEach((ch)=>{
-      if(ch.type==='added')spawnFloats(ch.doc.data().count||6);
+  try{
+    const tenSecAgo=new Date(Date.now()-10000);
+    reactRef.where('t','>',tenSecAgo).orderBy('t','asc').onSnapshot((snap)=>{
+      snap.docChanges().forEach((ch)=>{
+        if(ch.type==='added')spawnFloats(ch.doc.data().count||6);
+      });
     });
-  });
+  }catch(e){console.warn('reactRef:',e);}
 
   initBoardEvents();
   initPasteAndDrop();
   let count=0,initialLoad=true;
-  msgsRef.orderBy('t','asc').onSnapshot((snap)=>{
+  try{msgsRef.orderBy('t','asc').onSnapshot((snap)=>{
     snap.docChanges().forEach((ch)=>{
       if(ch.type==='added'){
         const m=ch.doc.data();
