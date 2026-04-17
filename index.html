@@ -27,7 +27,9 @@ html,body{height:100%;background:#0a0a0a;overflow:hidden;font-family:-apple-syst
 #admin-badge{font-size:10px;font-weight:700;color:white;background:var(--red);padding:3px 10px;border-radius:20px;display:none;}
 #reset-btn{font-size:11px;color:rgba(255,255,255,.4);background:none;border:1px solid rgba(255,255,255,.15);cursor:pointer;padding:4px 10px;border-radius:20px;display:none;}
 #reset-btn:hover{color:white;}
-#board{position:fixed;top:64px;left:0;right:0;bottom:82px;overflow:hidden;z-index:10;}
+#board{position:fixed;top:64px;left:0;right:0;bottom:82px;overflow:hidden;z-index:10;cursor:grab;user-select:none;}
+#board.panning{cursor:grabbing;}
+#canvas{position:absolute;left:0;top:0;width:6000px;height:5000px;transform-origin:0 0;}
 .mcard{position:absolute;background:rgba(255,255,255,.11);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.13);border-radius:20px;padding:14px 18px 12px;max-width:340px;min-width:120px;cursor:default;transition:box-shadow .25s;}
 .mcard:hover{z-index:500!important;box-shadow:0 8px 40px rgba(0,0,0,.65);transform:translate(-50%,-50%) scale(1.06) rotate(0deg)!important;transition:box-shadow .25s,transform .2s;}
 .mcard.fading{animation:fadeOut .6s ease forwards!important;}
@@ -104,6 +106,9 @@ const LOGO_COLOR="data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BS
 const PALETTE=['#FF3A2F','#E91E63','#AB47BC','#5C6BC0','#29B6F6','#26A69A','#FFA726','#EF5350'];
 const HEARTS=['❤️','🧡','💛','💚','💙','💜','🔥','✨','💥','🎉'];
 const ADMIN_PW='catchtable';
+let panX=0,panY=0,isPanning=false,panSX=0,panSY=0,panOX=0,panOY=0;
+let dragCard=null,dragOX=0,dragOY=0;
+function applyPan(){const cv=document.getElementById('canvas');if(cv)cv.style.transform='translate('+panX+'px,'+panY+'px)';}
 
 function buildZones(){
   const xs=[12,26,40,54,68,82],ys=[14,32,52,72];
@@ -117,8 +122,10 @@ let zoneIdx=0;
 const cardQueue=[];
 
 function getPos(){
-  if(zoneIdx<ZONES.length){const z=ZONES[zoneIdx++];return{x:z.x+rnd(-2,2),y:z.y+rnd(-2,2)};}
-  return{x:rnd(10,85),y:rnd(10,85)};
+  const bw=document.getElementById('board').offsetWidth||window.innerWidth;
+  const bh=(document.getElementById('board').offsetHeight)||(window.innerHeight-146);
+  if(zoneIdx<ZONES.length){const z=ZONES[zoneIdx++];return{x:(z.x/100)*bw+rnd(-20,20),y:(z.y/100)*bh+rnd(-15,15)};}
+  return{x:rnd(80,bw-80),y:rnd(60,bh-60)};
 }
 function colorFor(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return PALETTE[Math.abs(h)%PALETTE.length];}
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
@@ -165,7 +172,7 @@ function mountDisplay(){
         <div class="viewer-pill">👁 <span id="msg-count">0</span></div>
       </div>
     </div>
-    <div id="board"></div>
+    <div id="board"><div id="canvas"></div></div>
     <div class="qr-panel">
       <div id="qrcode"></div>
       <div class="qr-label">QR 스캔하기</div>
@@ -200,6 +207,7 @@ function mountDisplay(){
     });
   });
 
+  initBoardEvents();
   let count=0,initialLoad=true;
   msgsRef.orderBy('t','asc').onSnapshot((snap)=>{
     snap.docChanges().forEach((ch)=>{
@@ -241,41 +249,95 @@ function clearDFile(){
 
 function addCard(m,docId,animate){
   const board=document.getElementById('board');
-  const c=colorFor(m.name);
+  const canvas=document.getElementById('canvas');
+  const bw=board.offsetWidth,bh=board.offsetHeight;
+  const col=colorFor(m.name);
   const rot=rnd(-5,5);
   const pos=getPos();
   const card=document.createElement('div');
   card.className='mcard';
   card.dataset.id=docId;
   const imgHtml=m.imageUrl?`<div class="mcard-img"><img src="${m.imageUrl}" loading="lazy"/></div>`:'';
-  const timeStr=m.t?new Date(m.t.seconds*1000).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'';;
+  const timeStr=m.t?new Date(m.t.seconds*1000).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
   card.innerHTML=`
     <button class="mcard-del" onclick="deleteOne('${docId}',this)">✕</button>
-    <div class="mcard-name" style="color:${c};">${esc(m.name)} <span style="font-size:10px;font-weight:400;opacity:.45;margin-left:4px;">${timeStr}</span></div>
+    <div class="mcard-name" style="color:${col};">${esc(m.name)} <span style="font-size:10px;font-weight:400;opacity:.45;margin-left:4px;">${timeStr}</span></div>
     <div class="mcard-text">${esc(m.msg)}</div>
     ${imgHtml}`;
+  card.addEventListener('mousedown',e=>startCardDrag(e,card));
+  card.addEventListener('touchstart',e=>startCardDrag(e,card),{passive:false});
   if(animate){
-    card.style.cssText=`position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(0) rotate(${rot}deg);z-index:200;transition:transform .45s cubic-bezier(.34,1.56,.64,1);`;
-    board.appendChild(card);
+    const sx=bw/2-panX,sy=bh/2-panY;
+    card.style.cssText=`position:absolute;left:${sx}px;top:${sy}px;transform:translate(-50%,-50%) scale(0) rotate(${rot}deg);z-index:200;transition:transform .45s cubic-bezier(.34,1.56,.64,1);`;
+    canvas.appendChild(card);
     cardQueue.push({el:card,docId});
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
       card.style.transform=`translate(-50%,-50%) scale(1.1) rotate(${rot}deg)`;
     }));
     setTimeout(()=>{
       card.style.transition='left .9s cubic-bezier(.25,.46,.45,.94),top .9s cubic-bezier(.25,.46,.45,.94),transform .9s cubic-bezier(.25,.46,.45,.94)';
-      card.style.left=pos.x+'%';
-      card.style.top=pos.y+'%';
+      card.style.left=pos.x+'px';card.style.top=pos.y+'px';
       card.style.transform=`translate(-50%,-50%) scale(1) rotate(${rot}deg)`;
-      setTimeout(()=>{
-        card.style.zIndex='11';
-        card.style.transition='box-shadow .25s';
-      },950);
+      setTimeout(()=>{card.style.zIndex='11';card.style.transition='box-shadow .25s';},950);
     },1400);
   }else{
-    card.style.cssText=`position:absolute;left:${pos.x}%;top:${pos.y}%;transform:translate(-50%,-50%) scale(1) rotate(${rot}deg);z-index:11;transition:box-shadow .25s;`;
-    board.appendChild(card);
+    card.style.cssText=`position:absolute;left:${pos.x}px;top:${pos.y}px;transform:translate(-50%,-50%) scale(1) rotate(${rot}deg);z-index:11;transition:box-shadow .25s;`;
+    canvas.appendChild(card);
     cardQueue.push({el:card,docId});
   }
+}
+
+function startCardDrag(e,card){
+  e.stopPropagation();
+  const t=e.touches?e.touches[0]:e;
+  const br=document.getElementById('board').getBoundingClientRect();
+  dragOX=t.clientX-br.left-panX-parseFloat(card.style.left||0);
+  dragOY=t.clientY-br.top-panY-parseFloat(card.style.top||0);
+  dragCard=card;card.style.zIndex='300';card.style.transition='box-shadow .25s';
+  if(e.cancelable)e.preventDefault();
+}
+
+function initBoardEvents(){
+  const board=document.getElementById('board');
+  board.addEventListener('mousedown',e=>{
+    if(e.target.closest('.mcard'))return;
+    isPanning=true;board.classList.add('panning');
+    panSX=e.clientX;panSY=e.clientY;panOX=panX;panOY=panY;
+  });
+  document.addEventListener('mousemove',e=>{
+    if(dragCard){
+      const br=board.getBoundingClientRect();
+      dragCard.style.left=(e.clientX-br.left-panX-dragOX)+'px';
+      dragCard.style.top=(e.clientY-br.top-panY-dragOY)+'px';return;
+    }
+    if(!isPanning)return;
+    panX=panOX+(e.clientX-panSX);panY=panOY+(e.clientY-panSY);applyPan();
+  });
+  document.addEventListener('mouseup',()=>{
+    isPanning=false;board.classList.remove('panning');
+    if(dragCard){dragCard.style.zIndex='11';dragCard=null;}
+  });
+  board.addEventListener('wheel',e=>{
+    e.preventDefault();panX-=e.deltaX;panY-=e.deltaY;applyPan();
+  },{passive:false});
+  let tpStart=null;
+  board.addEventListener('touchstart',e=>{
+    if(e.target.closest('.mcard'))return;
+    if(e.touches.length===1)tpStart={x:e.touches[0].clientX,y:e.touches[0].clientY,px:panX,py:panY};
+  },{passive:true});
+  board.addEventListener('touchmove',e=>{
+    if(dragCard){
+      const br=board.getBoundingClientRect();const t=e.touches[0];
+      dragCard.style.left=(t.clientX-br.left-panX-dragOX)+'px';
+      dragCard.style.top=(t.clientY-br.top-panY-dragOY)+'px';
+      if(e.cancelable)e.preventDefault();return;
+    }
+    if(!tpStart||e.touches.length!==1)return;
+    panX=tpStart.px+(e.touches[0].clientX-tpStart.x);
+    panY=tpStart.py+(e.touches[0].clientY-tpStart.y);
+    applyPan();if(e.cancelable)e.preventDefault();
+  },{passive:false});
+  board.addEventListener('touchend',()=>{tpStart=null;if(dragCard){dragCard.style.zIndex='11';dragCard=null;}});
 }
 
 function fadeCard(el){
