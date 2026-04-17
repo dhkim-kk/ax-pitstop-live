@@ -167,61 +167,11 @@ let panX=0,panY=0,scale=1,isPanning=false,panSX=0,panSY=0,panOX=0,panOY=0;
 let dragCard=null,dragOX=0,dragOY=0;
 function applyPan(){const cv=document.getElementById('canvas');if(cv)cv.style.transform=`translate(${panX}px,${panY}px) scale(${scale})`;}
 
-let ZONES=[];
-let zoneIdx=0;
+
 const cardQueue=[];
 
-function buildLogoZones(){
-  try{
-    const cv=document.createElement('canvas');
-    cv.width=600;cv.height=220;
-    const ctx=cv.getContext('2d');
-    if(!ctx)return[];
-    ctx.fillStyle='#000';ctx.fillRect(0,0,600,220);
-    ctx.fillStyle='#fff';
-    ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.font='bold 88px Arial,sans-serif';
-    ctx.fillText('CATCH',300,65);
-    ctx.font='bold 88px Arial,sans-serif';
-    ctx.fillText('TABLE',300,155);
-    const data=ctx.getImageData(0,0,600,220).data;
-    const zones=[];const step=10;
-    for(let y=0;y<220;y+=step){
-      for(let x=0;x<600;x+=step){
-        if(data[(y*600+x)*4]>80){
-          // 정규화된 좌표 (0~1)
-          zones.push({nx:x/600, ny:y/220});
-        }
-      }
-    }
-    for(let i=zones.length-1;i>0;i--){
-      const j=Math.floor(Math.random()*(i+1));
-      [zones[i],zones[j]]=[zones[j],zones[i]];
-    }
-    console.log('Logo zones:',zones.length);
-    return zones;
-  }catch(e){
-    console.warn('buildLogoZones error:',e);
-    return[];
-  }
-}
-
-function getBoardSize(){
-  const b=document.getElementById('board');
-  return{w:b?b.offsetWidth:1280, h:b?b.offsetHeight:700};
-}
-
-// CATCHTABLE 로고가 배치될 캔버스 영역 (6000x5000 캔버스 중앙)
-const LOGO_X1=300, LOGO_X2=5700, LOGO_Y1=800, LOGO_Y2=4200;
-
 function getPos(){
-  if(ZONES.length===0)return{x:rnd(LOGO_X1,LOGO_X2),y:rnd(LOGO_Y1,LOGO_Y2)};
-  const z=ZONES[zoneIdx%ZONES.length];
-  zoneIdx++;
-  return{
-    x: LOGO_X1 + z.nx*(LOGO_X2-LOGO_X1) + rnd(-20,20),
-    y: LOGO_Y1 + z.ny*(LOGO_Y2-LOGO_Y1) + rnd(-16,16)
-  };
+  return{x:rnd(150,5700), y:rnd(150,4700)};
 }
 
 function colorFor(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return PALETTE[Math.abs(h)%PALETTE.length];}
@@ -270,7 +220,6 @@ document.addEventListener('DOMContentLoaded',()=>{
 let dFile=null;
 
 function mountDisplay(){
-  if(ZONES.length===0){try{ZONES=buildLogoZones();}catch(e){console.warn('zones:',e);ZONES=[];}}
   document.body.insertAdjacentHTML('beforeend',`
     <div class="hdr">
       <div class="hdr-left">
@@ -314,8 +263,6 @@ function mountDisplay(){
   const qrUrl=location.origin+location.pathname+'#submit';
   new QRCode(document.getElementById('qrcode'),{text:qrUrl,width:110,height:110,colorDark:'#111',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});
   document.getElementById('d-color-row').innerHTML=swatchHTML('d','pickColorD');
-  // 초기 뷰를 로고 영역에 맞춤
-  setTimeout(()=>goHome(),300);
 
   // 실시간 하트 리액션 수신
   try{
@@ -460,16 +407,8 @@ function animatePan(tpx,tpy,dur){
 }
 
 function goHome(){
-  const board=document.getElementById('board');
-  const bw=board?board.offsetWidth:1280;
-  const bh=board?board.offsetHeight:700;
-  const logoW=LOGO_X2-LOGO_X1, logoH=LOGO_Y2-LOGO_Y1;
-  // 로고 영역이 화면에 꽉 차도록 줌 계산
-  const s=Math.min(bw/logoW, bh/logoH)*0.88;
-  scale=s;
-  const targetPanX=bw/2-(LOGO_X1+logoW/2)*s;
-  const targetPanY=bh/2-(LOGO_Y1+logoH/2)*s;
-  animatePan(targetPanX,targetPanY,700);
+  scale=1;
+  animatePan(0,0,500);
 }
 
 function initPasteAndDrop(){
