@@ -211,15 +211,16 @@ function getBoardSize(){
   return{w:b?b.offsetWidth:1280, h:b?b.offsetHeight:700};
 }
 
+// CATCHTABLE 로고가 배치될 캔버스 영역 (6000x5000 캔버스 중앙)
+const LOGO_X1=300, LOGO_X2=5700, LOGO_Y1=800, LOGO_Y2=4200;
+
 function getPos(){
-  const {w,h}=getBoardSize();
-  if(ZONES.length===0)return{x:rnd(80,w-80),y:rnd(60,h-60)};
+  if(ZONES.length===0)return{x:rnd(LOGO_X1,LOGO_X2),y:rnd(LOGO_Y1,LOGO_Y2)};
   const z=ZONES[zoneIdx%ZONES.length];
   zoneIdx++;
-  // 보드 크기에 맞춰 스케일, 여백 10%
   return{
-    x: w*0.05 + z.nx*(w*0.9) + rnd(-15,15),
-    y: h*0.05 + z.ny*(h*0.9) + rnd(-12,12)
+    x: LOGO_X1 + z.nx*(LOGO_X2-LOGO_X1) + rnd(-20,20),
+    y: LOGO_Y1 + z.ny*(LOGO_Y2-LOGO_Y1) + rnd(-16,16)
   };
 }
 
@@ -313,6 +314,8 @@ function mountDisplay(){
   const qrUrl=location.origin+location.pathname+'#submit';
   new QRCode(document.getElementById('qrcode'),{text:qrUrl,width:110,height:110,colorDark:'#111',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});
   document.getElementById('d-color-row').innerHTML=swatchHTML('d','pickColorD');
+  // 초기 뷰를 로고 영역에 맞춤
+  setTimeout(()=>goHome(),300);
 
   // 실시간 하트 리액션 수신
   try{
@@ -457,8 +460,16 @@ function animatePan(tpx,tpy,dur){
 }
 
 function goHome(){
-  scale=1;
-  animatePan(0,0,500);
+  const board=document.getElementById('board');
+  const bw=board?board.offsetWidth:1280;
+  const bh=board?board.offsetHeight:700;
+  const logoW=LOGO_X2-LOGO_X1, logoH=LOGO_Y2-LOGO_Y1;
+  // 로고 영역이 화면에 꽉 차도록 줌 계산
+  const s=Math.min(bw/logoW, bh/logoH)*0.88;
+  scale=s;
+  const targetPanX=bw/2-(LOGO_X1+logoW/2)*s;
+  const targetPanY=bh/2-(LOGO_Y1+logoH/2)*s;
+  animatePan(targetPanX,targetPanY,700);
 }
 
 function initPasteAndDrop(){
