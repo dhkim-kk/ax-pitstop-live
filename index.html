@@ -167,6 +167,9 @@ let panX=0,panY=0,scale=1,isPanning=false,panSX=0,panSY=0,panOX=0,panOY=0;
 let dragCard=null,dragOX=0,dragOY=0;
 function applyPan(){const cv=document.getElementById('canvas');if(cv)cv.style.transform=`translate(${panX}px,${panY}px) scale(${scale})`;}
 
+let ZONES=[];
+let zoneIdx=0;
+
 function buildLogoZones(){
   try{
     const cv=document.createElement('canvas');
