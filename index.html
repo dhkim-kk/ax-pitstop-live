@@ -11,46 +11,123 @@
     *{box-sizing:border-box;margin:0;padding:0;}
     :root{--red:#FF3A2F;}
     html,body{height:100%;background:#0a0a0a;overflow:hidden;font-family:-apple-system,"Apple SD Gothic Neo","Pretendard",sans-serif;}
+
     @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.2;}}
-    @keyframes floatHeart{0%{opacity:1;transform:translateY(0) scale(1);}40%{opacity:0.9;transform:translateY(-120px) scale(1.3);}100%{opacity:0;transform:translateY(-380px) scale(0.5);}}
-    @keyframes danmaku{from{transform:translateX(0);}to{transform:translateX(calc(-100vw - 700px));}}
+    @keyframes popIn{
+      0%{opacity:0;transform:translate(-50%,-50%) scale(0.5) rotate(var(--r));}
+      65%{opacity:1;transform:translate(-50%,-50%) scale(1.08) rotate(var(--r));}
+      100%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(var(--r));}
+    }
+    @keyframes fadeOut{
+      0%{opacity:1;}
+      100%{opacity:0;transform:translate(-50%,-50%) scale(0.85);}
+    }
+    @keyframes floatUp{
+      0%{opacity:1;transform:translateY(0) scale(1);}
+      40%{opacity:0.9;transform:translateY(-110px) scale(1.25);}
+      100%{opacity:0;transform:translateY(-320px) scale(0.5);}
+    }
     @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
-    .hdr{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:12px 20px 10px;background:linear-gradient(to bottom,rgba(0,0,0,0.85) 0%,transparent 100%);}
+    @keyframes logoFloat{
+      0%{opacity:1;transform:translateY(0) scale(1) rotate(-6deg);}
+      50%{opacity:0.8;transform:translateY(-150px) scale(1.1) rotate(4deg);}
+      100%{opacity:0;transform:translateY(-320px) scale(0.7) rotate(-3deg);}
+    }
+
+    /* ── 헤더 ── */
+    .hdr{
+      position:fixed;top:0;left:0;right:0;z-index:100;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:12px 20px 10px;
+      background:linear-gradient(to bottom,rgba(0,0,0,0.88) 0%,transparent 100%);
+    }
     .hdr-left{display:flex;align-items:center;gap:12px;}
     .ct-logo{height:26px;width:auto;cursor:pointer;flex-shrink:0;}
     .live-pill{display:inline-flex;align-items:center;gap:4px;background:var(--red);color:white;font-size:9px;font-weight:900;letter-spacing:1.2px;padding:3px 8px;border-radius:4px;}
     .live-dot{width:5px;height:5px;background:white;border-radius:50%;animation:pulse 1.5s infinite;}
-    .event-name{font-size:13px;font-weight:600;color:rgba(255,255,255,0.65);}
+    .event-name{font-size:13px;font-weight:600;color:rgba(255,255,255,0.6);}
     .hdr-right{display:flex;align-items:center;gap:8px;}
     .viewer-pill{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.1);backdrop-filter:blur(8px);padding:5px 12px;border-radius:20px;font-size:13px;font-weight:600;color:white;}
     #admin-badge{font-size:10px;font-weight:700;color:white;background:var(--red);padding:3px 10px;border-radius:20px;display:none;}
     #reset-btn{font-size:11px;color:rgba(255,255,255,0.4);background:none;border:1px solid rgba(255,255,255,0.15);cursor:pointer;padding:4px 10px;border-radius:20px;display:none;}
     #reset-btn:hover{color:white;}
-    #danmaku-stage{position:fixed;top:58px;left:0;right:0;bottom:78px;overflow:hidden;z-index:10;pointer-events:none;}
-    .lane{position:absolute;left:0;right:0;height:52px;}
-    .dmsg{position:absolute;right:-700px;display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.12);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:7px 14px 7px 10px;white-space:nowrap;pointer-events:auto;}
-    .dmsg-avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;flex-shrink:0;}
-    .dmsg-name{font-size:10px;font-weight:700;margin-right:2px;}
-    .dmsg-text{font-size:13px;color:rgba(255,255,255,0.92);}
-    .dmsg-del{display:none;background:rgba(255,50,50,0.7);border:none;cursor:pointer;color:white;font-size:9px;width:16px;height:16px;border-radius:50%;align-items:center;justify-content:center;flex-shrink:0;margin-left:4px;}
-    .admin-mode .dmsg:hover .dmsg-del{display:flex;}
-    .qr-panel{position:fixed;top:60px;right:16px;z-index:80;background:rgba(255,255,255,0.08);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:14px;display:flex;flex-direction:column;align-items:center;gap:8px;}
+
+    /* ── 메세지 보드 ── */
+    #board{position:fixed;top:58px;left:0;right:0;bottom:78px;overflow:hidden;z-index:10;}
+
+    /* ── 메세지 카드 (다크 버블) ── */
+    .mcard{
+      position:absolute;
+      --r:0deg;
+      transform:translate(-50%,-50%) scale(1) rotate(var(--r));
+      animation:popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards;
+      background:rgba(255,255,255,0.11);
+      backdrop-filter:blur(14px);
+      border:1px solid rgba(255,255,255,0.13);
+      border-radius:20px;
+      padding:14px 18px 12px;
+      max-width:320px;
+      min-width:120px;
+      cursor:default;
+      transition:transform 0.2s,box-shadow 0.2s;
+      z-index:11;
+    }
+    .mcard:hover{
+      z-index:50;
+      box-shadow:0 8px 32px rgba(0,0,0,0.5);
+    }
+    .mcard.fading{animation:fadeOut 0.6s ease forwards;}
+    .mcard-name{font-size:13px;font-weight:700;margin-bottom:5px;}
+    .mcard-text{font-size:22px;font-weight:500;color:rgba(255,255,255,0.92);line-height:1.4;word-break:break-word;}
+    .mcard-del{
+      position:absolute;top:6px;right:8px;
+      display:none;background:rgba(255,50,50,0.75);border:none;cursor:pointer;
+      color:white;font-size:10px;width:18px;height:18px;border-radius:50%;
+      align-items:center;justify-content:center;
+    }
+    .admin-mode .mcard:hover .mcard-del{display:flex;}
+
+    /* ── QR 패널 ── */
+    .qr-panel{
+      position:fixed;top:60px;right:16px;z-index:80;
+      background:rgba(255,255,255,0.08);backdrop-filter:blur(16px);
+      border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:14px;
+      display:flex;flex-direction:column;align-items:center;gap:8px;
+    }
     #qrcode{width:110px;height:110px;border-radius:8px;overflow:hidden;}
     .qr-label{font-size:10px;font-weight:700;color:rgba(255,255,255,0.5);letter-spacing:0.5px;}
     #resp-count{font-size:10px;color:rgba(255,255,255,0.3);}
-    .heart{position:fixed;pointer-events:none;z-index:200;animation:floatHeart 2.8s ease-out forwards;}
-    .input-bar{position:fixed;bottom:0;left:0;right:0;z-index:100;padding:10px 14px 22px;background:linear-gradient(to top,rgba(0,0,0,0.92) 60%,transparent 100%);display:flex;align-items:center;gap:8px;}
+
+    /* ── 로고 플로트 ── */
+    .logo-float{
+      position:fixed;pointer-events:none;z-index:200;
+      animation:logoFloat 2.6s ease-out forwards;
+    }
+    .logo-float img{height:22px;width:auto;filter:brightness(10);}
+
+    /* ── 하트 ── */
+    .heart{position:fixed;pointer-events:none;z-index:200;animation:floatUp 2.8s ease-out forwards;}
+
+    /* ── 하단 입력바 ── */
+    .input-bar{
+      position:fixed;bottom:0;left:0;right:0;z-index:100;
+      padding:10px 14px 22px;
+      background:linear-gradient(to top,rgba(0,0,0,0.92) 60%,transparent 100%);
+      display:flex;align-items:center;gap:8px;
+    }
     .ibox{flex:1;display:flex;align-items:center;background:rgba(255,255,255,0.1);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.15);border-radius:26px;padding:0 14px;gap:8px;}
     .ibox:focus-within{border-color:rgba(255,255,255,0.35);}
-    #inp-name{width:76px;flex-shrink:0;background:none;border:none;outline:none;font-size:13px;font-weight:600;color:rgba(255,255,255,0.65);font-family:inherit;border-right:1px solid rgba(255,255,255,0.12);padding:12px 10px 12px 0;}
+    #inp-name{width:80px;flex-shrink:0;background:none;border:none;outline:none;font-size:14px;font-weight:600;color:rgba(255,255,255,0.65);font-family:inherit;border-right:1px solid rgba(255,255,255,0.12);padding:13px 10px 13px 0;}
     #inp-name::placeholder{color:rgba(255,255,255,0.25);}
-    #inp-msg{flex:1;background:none;border:none;outline:none;font-size:14px;color:white;font-family:inherit;padding:12px 0;}
+    #inp-msg{flex:1;background:none;border:none;outline:none;font-size:15px;color:white;font-family:inherit;padding:13px 0;}
     #inp-msg::placeholder{color:rgba(255,255,255,0.25);}
-    .hbtn{width:44px;height:44px;border-radius:50%;flex-shrink:0;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;transition:transform 0.15s;}
+    .hbtn{width:46px;height:46px;border-radius:50%;flex-shrink:0;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);cursor:pointer;font-size:22px;display:flex;align-items:center;justify-content:center;transition:transform 0.15s;}
     .hbtn:hover{transform:scale(1.1);}
-    .sbtn{width:44px;height:44px;border-radius:50%;flex-shrink:0;background:var(--red);border:none;cursor:pointer;font-size:17px;color:white;display:flex;align-items:center;justify-content:center;transition:transform 0.15s,opacity 0.15s;}
+    .sbtn{width:46px;height:46px;border-radius:50%;flex-shrink:0;background:var(--red);border:none;cursor:pointer;font-size:18px;color:white;display:flex;align-items:center;justify-content:center;transition:transform 0.15s,opacity 0.15s;}
     .sbtn:hover{transform:scale(1.08);}
     .sbtn:disabled{opacity:0.4;cursor:not-allowed;}
+
+    /* ── 모바일 submit ── */
     #submit-view{min-height:100vh;display:flex;align-items:flex-end;background:#0a0a0a;}
     .s-panel{width:100%;background:#1c1c1e;border-radius:26px 26px 0 0;padding:20px 20px 40px;}
     .s-logo{height:20px;width:auto;margin-bottom:16px;opacity:0.7;}
@@ -90,11 +167,12 @@
   const PALETTE=['#FF3A2F','#E91E63','#AB47BC','#5C6BC0','#29B6F6','#26A69A','#FFA726','#EF5350'];
   const HEARTS=['❤️','🧡','💛','💚','💙','💜','🔥','✨','💥','🎉'];
   const ADMIN_PW='catchtable';
-  const LANE_COUNT=9;
-  const laneTimers=new Array(LANE_COUNT).fill(0);
+  const MAX_CARDS=22; // 화면에 최대 카드 수
+  const cardQueue=[]; // {el, docId}
 
   function colorFor(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return PALETTE[Math.abs(h)%PALETTE.length];}
   function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function rnd(min,max){return min+Math.random()*(max-min);}
 
   const isSubmit=location.hash==='#submit';
   document.addEventListener('DOMContentLoaded',()=>{isSubmit?mountSubmit():mountDisplay();});
@@ -113,7 +191,7 @@
           <div class="viewer-pill">👁 <span id="msg-count">0</span></div>
         </div>
       </div>
-      <div id="danmaku-stage"></div>
+      <div id="board"></div>
       <div class="qr-panel">
         <div id="qrcode"></div>
         <div class="qr-label">QR 스캔하기</div>
@@ -124,26 +202,15 @@
           <input id="inp-name" type="text" placeholder="이름" maxlength="12" autocomplete="off"/>
           <input id="inp-msg" type="text" placeholder="응원 메세지..." maxlength="60" onkeydown="if(event.key==='Enter')sendMsg()"/>
         </div>
-        <button class="hbtn" onclick="spawnHearts(8)">❤️</button>
+        <button class="hbtn" onclick="spawnLogos(8)">❤️</button>
         <button class="sbtn" id="d-send" onclick="sendMsg()">➤</button>
       </div>
     `);
 
-    // 레인 생성
-    const stage=document.getElementById('danmaku-stage');
-    const stageH=window.innerHeight-136;
-    const laneH=Math.floor(stageH/LANE_COUNT);
-    for(let i=0;i<LANE_COUNT;i++){
-      const lane=document.createElement('div');
-      lane.className='lane';lane.id='lane-'+i;
-      lane.style.top=(i*laneH+2)+'px';
-      stage.appendChild(lane);
-    }
-
     const qrUrl=location.origin+location.pathname+'#submit';
     new QRCode(document.getElementById('qrcode'),{text:qrUrl,width:110,height:110,colorDark:'#111',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});
 
-    let count=0,initialLoad=true;
+    let count=0, initialLoad=true;
     msgsRef.orderBy('t','asc').onSnapshot((snap)=>{
       snap.docChanges().forEach((ch)=>{
         if(ch.type==='added'){
@@ -151,73 +218,103 @@
           count++;
           document.getElementById('msg-count').textContent=count;
           document.getElementById('resp-count').textContent=count+' responded';
-          if(!initialLoad){shootDanmaku(m,ch.doc.id);spawnHearts(3);}
+          addCard(m,ch.doc.id,!initialLoad);
+          if(!initialLoad) spawnLogos(4);
         }
         if(ch.type==='removed'){
-          document.querySelectorAll(`[data-id="${ch.doc.id}"]`).forEach(el=>{
-            el.style.opacity='0';setTimeout(()=>el.remove(),300);
-          });
+          const idx=cardQueue.findIndex(c=>c.docId===ch.doc.id);
+          if(idx>-1){
+            fadeCard(cardQueue[idx].el);
+            cardQueue.splice(idx,1);
+          }
         }
       });
       initialLoad=false;
     });
   }
 
-  function pickLane(){
-    let best=0;
-    for(let i=1;i<LANE_COUNT;i++){if(laneTimers[i]<laneTimers[best])best=i;}
-    laneTimers[best]=Date.now();
-    return best;
+  function addCard(m, docId, animate){
+    const board=document.getElementById('board');
+    const bw=board.offsetWidth, bh=board.offsetHeight;
+
+    // 가득 찼으면 가장 오래된 카드 제거
+    if(cardQueue.length>=MAX_CARDS){
+      const oldest=cardQueue.shift();
+      fadeCard(oldest.el);
+    }
+
+    const c=colorFor(m.name);
+    const rot=rnd(-4,4);
+    const card=document.createElement('div');
+    card.className='mcard';
+    card.dataset.id=docId;
+    card.style.setProperty('--r',rot+'deg');
+
+    // 랜덤 위치 (카드 크기 고려해서 여백 줌)
+    const px=rnd(12,88); // % 기준
+    const py=rnd(10,90);
+    card.style.left=px+'%';
+    card.style.top=py+'%';
+
+    if(!animate){
+      card.style.animation='none';
+      card.style.opacity='1';
+      card.style.transform=`translate(-50%,-50%) scale(1) rotate(${rot}deg)`;
+    }
+
+    card.innerHTML=`
+      <button class="mcard-del" onclick="deleteOne('${docId}',this)">✕</button>
+      <div class="mcard-name" style="color:${c};">${esc(m.name)}</div>
+      <div class="mcard-text">${esc(m.msg)}</div>`;
+
+    board.appendChild(card);
+    cardQueue.push({el:card, docId});
   }
 
-  function shootDanmaku(m,docId){
-    const laneIdx=pickLane();
-    const lane=document.getElementById('lane-'+laneIdx);
-    if(!lane)return;
-    const c=colorFor(m.name);
-    const el=document.createElement('div');
-    el.className='dmsg';
-    el.dataset.id=docId;
-    const dur=(9+m.msg.length*0.1)+'s';
-    el.style.animation=`danmaku ${dur} linear forwards`;
-    el.innerHTML=`
-      <div class="dmsg-avatar" style="background:${c};">${esc(m.name.slice(0,2))}</div>
-      <span class="dmsg-name" style="color:${c};">${esc(m.name)}</span>
-      <span class="dmsg-text">${esc(m.msg)}</span>
-      <button class="dmsg-del" onclick="deleteOne('${docId}',this)">✕</button>`;
-    lane.appendChild(el);
-    el.addEventListener('animationend',()=>el.remove(),{once:true});
+  function fadeCard(el){
+    if(!el) return;
+    el.classList.add('fading');
+    setTimeout(()=>el.remove(), 650);
   }
 
   async function sendMsg(){
     const name=document.getElementById('inp-name').value.trim();
     const msg=document.getElementById('inp-msg').value.trim();
     if(!name||!msg){alert('이름과 메세지를 입력해주세요!');return;}
-    const btn=document.getElementById('d-send');btn.disabled=true;
+    const btn=document.getElementById('d-send');
+    btn.disabled=true;
     try{
       await msgsRef.add({name,msg,t:firebase.firestore.FieldValue.serverTimestamp()});
-      document.getElementById('inp-msg').value='';spawnHearts(6);
+      document.getElementById('inp-msg').value='';
+      spawnLogos(6);
     }catch(e){alert('오류: '+e.message);}
     btn.disabled=false;
   }
 
-  function spawnHearts(n){
+  /* ── 로고 + 하트 플로트 ── */
+  function spawnLogos(n){
     n=n||6;
+    const items=[...HEARTS,'LOGO','LOGO','LOGO']; // 로고 비율 섞기
     for(let i=0;i<n;i++){
       setTimeout(()=>{
-        const h=document.createElement('div');
-        h.className='heart';
-        h.textContent=HEARTS[Math.floor(Math.random()*HEARTS.length)];
-        h.style.left=(15+Math.random()*65)+'vw';
-        h.style.bottom=(10+Math.random()*60)+'vh';
-        h.style.fontSize=(16+Math.random()*22)+'px';
-        h.style.animationDuration=(1.8+Math.random()*1.6)+'s';
-        document.body.appendChild(h);
-        setTimeout(()=>h.remove(),4000);
-      },i*80);
+        const type=items[Math.floor(Math.random()*items.length)];
+        const el=document.createElement('div');
+        el.style.cssText=`position:fixed;pointer-events:none;z-index:200;left:${15+Math.random()*65}vw;bottom:${8+Math.random()*62}vh;`;
+        if(type==='LOGO'){
+          el.style.animation=`logoFloat ${1.8+Math.random()*1.4}s ease-out forwards`;
+          el.innerHTML=`<img src="${LOGO_SRC}" style="height:${18+Math.random()*14}px;width:auto;filter:brightness(10);opacity:0.9;transform:rotate(${rnd(-15,15)}deg);">`;
+        } else {
+          el.style.animation=`floatUp ${1.8+Math.random()*1.4}s ease-out forwards`;
+          el.style.fontSize=(16+Math.random()*20)+'px';
+          el.textContent=type;
+        }
+        document.body.appendChild(el);
+        setTimeout(()=>el.remove(),4000);
+      },i*90);
     }
   }
 
+  /* ── ADMIN ── */
   let aClicks=0,aTimer=null,isAdmin=false;
   function adminClick(){
     aClicks++;clearTimeout(aTimer);
@@ -248,6 +345,7 @@
     try{await msgsRef.doc(docId).delete();}catch(e){btn.textContent='✕';}
   }
 
+  /* ─── SUBMIT ── */
   function mountSubmit(){
     document.body.style.overflow='auto';
     document.body.insertAdjacentHTML('beforeend',`
